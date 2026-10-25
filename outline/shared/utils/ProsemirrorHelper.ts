@@ -1,0 +1,600 @@
+import type { Schema } from "prosemirror-model";
+import type { Node } from "prosemirror-model";
+import { HeadingSlugger } from "../editor/lib/headingToSlug";
+import textBetween from "../editor/lib/textBetween";
+import type { ProsemirrorData } from "../types";
+import { hashString } from "./string";
+import { TextHelper } from "./TextHelper";
+import env from "../env";
+import { findChildren } from "@shared/editor/queries/findChildren";
+import { isLightboxNode } from "@shared/editor/lib/Lightbox";
+import { EditorStyleHelper } from "@shared/editor/styles/EditorStyleHelper";
+
+export type Heading = {
+  /* The heading in plain text */
+  title: string;
+  /* The level of the heading */
+  level: number;
+  /* The unique id of the heading */
+  id: string;
+  /* Whether the heading is nested inside a table */
+  inTable?: boolean;
+};
+
+export type CommentMark = {
+  /* The unique id of the comment */
+  id: string;
+  /* The id of the user who created the comment */
+  userId: string;
+  /* The text of the comment */
+  text: string;
+};
+
+export type NodeAnchor = { pos: number; id: string; className: string };
+
+export type Task = {
+  /* The text of the task */
+  text: string;
+  /* Whether the task is completed or not */
+  completed: boolean;
+};
+
+interface User {
+  name: string;
+  language: string | null;
+}
+
+export const attachmentRedirectRegex =
+  /\/api\/attachments\.redirect\?id=(?<id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi;
+
+export const attachmentPublicRegex =
+  /public\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/(?<id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi;
+
+export class ProsemirrorHelper {
+  /**
+   * Remove specific mark types from all nodes in the document.
+   *
+   * @param doc the prosemirror document or JSON data.
+   * @param marks the mark type names to remove.
+   * @returns the document data with specified marks removed.
+   */
+  static removeMarks(doc: Node | ProsemirrorData, marks: string[]) {
+    const json = "toJSON" in doc ? (doc.toJSON() as ProsemirrorData) : doc;
+    const markSet = new Set(marks);
+
+    function removeMarksInner(node: ProsemirrorData) {
+      // Node.toJSON shares attrs with the node, so replace them rather than mutate.
+      if (node.marks) {
+        node.marks = node.marks.filter((mark) => !markSet.has(mark.type));
+      }
+      if (node.attrs?.marks) {
+        node.attrs = {
+          ...node.attrs,
+          marks: (node.attrs.marks as { type: string }[])?.filter(
+            (mark) => !markSet.has(mark.type)
+          ),
+        };
+      }
+      if (node.content) {
+        node.content.forEach(removeMarksInner);
+      }
+      return node;
+    }
+    return removeMarksInner(json);
+  }
+
+  /**
+   * Returns the node as plain text.
+   *
+   * @param node The node to convert.
+   * @param schema The schema to use.
+   * @returns The document content as plain text without formatting.
+   */
+  static toPlainText(root: Node) {
+    return textBetween(root, 0, root.content.size);
+  }
+
+  /**
+   * Removes any empty paragraphs from the beginning and end of the document.
+   *
+   * @returns True if the editor is empty
+   */
+  static trim(doc: Node) {
+    let index = 0,
+      start = 0,
+      end = doc.nodeSize - 2,
+      isEmpty;
+
+    if (doc.childCount <= 1) {
+      return doc;
+    }
+
+    isEmpty = true;
+    while (isEmpty) {
+      const node = doc.maybeChild(index++);
+      if (!node) {
+        break;
+      }
+      isEmpty = !ProsemirrorHelper.hasText(node);
+      if (isEmpty) {
+        start += node.nodeSize;
+      }
+    }
+
+    index = doc.childCount - 1;
+    isEmpty = true;
+    while (isEmpty) {
+      const node = doc.maybeChild(index--);
+      if (!node) {
+        break;
+      }
+      isEmpty = !ProsemirrorHelper.hasText(node);
+      if (isEmpty) {
+        end -= node.nodeSize;
+      }
+    }
+
+    return doc.cut(start, end);
+  }
+
+  /**
+   * Returns true if the trimmed content of the passed document is an empty string.
+   *
+   * @returns True if the editor is empty
+   */
+  static isEmpty(doc: Node, schema?: Schema) {
+    if (!schema) {
+      return !doc || doc.textContent.trim() === "";
+    }
+
+    return !ProsemirrorHelper.hasText(doc);
+  }
+
+  /**
+   * Iterates through the document to find all of the comments that exist as marks.
+   *
+   * @param doc Prosemirror document node
+   * @returns Array<CommentMark>
+   */
+  static getComments(doc: Node): CommentMark[] {
+    const comments: CommentMark[] = [];
+
+    doc.descendants((node) => {
+      node.marks.forEach((mark) => {
+        if (mark.type.name === "comment") {
+          comments.push({
+            ...mark.attrs,
+            text: node.textContent,
+          } as CommentMark);
+        }
+      });
+
+      (
+        (node.attrs.marks ?? []) as {
+          type: string;
+          attrs: Partial<CommentMark>;
+        }[]
+      ).forEach((mark) => {
+        if (mark.type === "comment") {
+          comments.push({
+            ...mark.attrs,
+            // For image nodes, we don't have any text content, so we set it to an empty string
+            text: "",
+          } as CommentMark);
+        }
+      });
+
+      return true;
+    });
+
+    return comments;
+  }
+
+  /**
+   * Returns the anchors for headings and for nodes with comments in the
+   * document, headings first.
+   *
+   * @param doc Prosemirror document node.
+   * @returns array of anchors.
+   */
+  static getAnchors(doc: Node): NodeAnchor[] {
+    const slugger = new HeadingSlugger();
+    const headingAnchors: NodeAnchor[] = [];
+    const imageAnchors: NodeAnchor[] = [];
+
+    doc.descendants((node, pos) => {
+      if (node.type.name === "heading") {
+        headingAnchors.push({
+          pos,
+          id: slugger.slug(node),
+          className: EditorStyleHelper.headingPositionAnchor,
+        });
+      }
+
+      if (Array.isArray(node.attrs?.marks)) {
+        (
+          node.attrs.marks as { type?: string; attrs?: { id?: string } }[]
+        ).forEach((mark) => {
+          if (mark?.type === "comment" && mark?.attrs?.id) {
+            imageAnchors.push({
+              pos,
+              id: `comment-${mark.attrs.id}`,
+              className: EditorStyleHelper.imagePositionAnchor,
+            });
+          }
+        });
+      }
+    });
+
+    return [...headingAnchors, ...imageAnchors];
+  }
+
+  /**
+   * Computes a stable identifier for a node derived from its type and
+   * attributes. The `marks` attribute is excluded as it changes when comments
+   * are added or removed from the node.
+   *
+   * @param node the node to compute an identifier for.
+   * @returns a hex-encoded hash identifying the node.
+   */
+  static getNodeHash(node: Node): string {
+    const { marks: _marks, ...attrs } = node.attrs;
+    const sorted = Object.keys(attrs)
+      .sort()
+      .reduce<Record<string, unknown>>((acc, key) => {
+        acc[key] = attrs[key];
+        return acc;
+      }, {});
+
+    return hashString(`${node.type.name}:${JSON.stringify(sorted)}`);
+  }
+
+  /**
+   * Finds a node in the document by the hash of its attributes, see
+   * `getNodeHash`. When multiple nodes share the same hash the first
+   * occurrence in document order is returned.
+   *
+   * @param doc Prosemirror document node.
+   * @param hash the node hash to search for.
+   * @returns the matching node and its position, or null if no match.
+   */
+  static findNodeByHash(
+    doc: Node,
+    hash: string
+  ): { node: Node; pos: number } | null {
+    let result: { node: Node; pos: number } | null = null;
+
+    doc.descendants((node, pos) => {
+      if (result) {
+        return false;
+      }
+      if (!node.isText && ProsemirrorHelper.getNodeHash(node) === hash) {
+        result = { node, pos };
+        return false;
+      }
+      return true;
+    });
+
+    return result;
+  }
+
+  /**
+   * Returns the ids of comment marks attached to the node at the given position.
+   *
+   * @param doc Prosemirror document node.
+   * @param pos Position of the node within the document.
+   * @returns array of comment ids anchored to the node.
+   */
+  static getCommentIdsAtPos(doc: Node, pos: number): string[] {
+    const node = doc.nodeAt(pos);
+    if (!node || !Array.isArray(node.attrs?.marks)) {
+      return [];
+    }
+
+    return (node.attrs.marks as { type?: string; attrs?: { id?: string } }[])
+      .filter(
+        (mark): mark is { type: "comment"; attrs: { id: string } } =>
+          mark?.type === "comment" && !!mark?.attrs?.id
+      )
+      .map((mark) => mark.attrs.id);
+  }
+
+  /**
+   * Builds the consolidated anchor text for the given comment-id.
+   *
+   * @param marks all available comment marks in a document.
+   * @param commentId the comment-id to build the anchor text.
+   * @returns consolidated anchor text.
+   */
+  static getAnchorTextForComment(
+    marks: CommentMark[],
+    commentId: string
+  ): string | undefined {
+    const anchorTexts = marks
+      .filter((mark) => mark.id === commentId)
+      .map((mark) => mark.text);
+
+    return anchorTexts.length ? anchorTexts.join("") : undefined;
+  }
+
+  /**
+   * Iterates through the document to find all of the images.
+   *
+   * @param doc Prosemirror document node
+   * @returns Array<Node> of images
+   */
+  static getImages(doc: Node): Node[] {
+    const images: Node[] = [];
+
+    doc.descendants((node) => {
+      if (node.type.name === "image") {
+        images.push(node);
+      }
+
+      return true;
+    });
+
+    return images;
+  }
+
+  /**
+   * Iterates through the document to find all valid Lightbox nodes.
+   *
+   * @param doc Prosemirror document node
+   * @returns Array<NodeWithPos> of nodes allowed in Lightbox
+   */
+  static getLightboxNodes = (doc: Node) =>
+    findChildren(doc, isLightboxNode, true);
+
+  /**
+   * Iterates through the document to find all of the videos.
+   *
+   * @param doc Prosemirror document node
+   * @returns Array<Node> of videos
+   */
+  static getVideos(doc: Node): Node[] {
+    const videos: Node[] = [];
+
+    doc.descendants((node) => {
+      if (node.type.name === "video") {
+        videos.push(node);
+      }
+
+      // Videos are block nodes, so they are never inside a textblock.
+      return !node.isTextblock;
+    });
+
+    return videos;
+  }
+
+  /**
+   * Iterates through the document to find all of the attachments.
+   *
+   * @param doc Prosemirror document node
+   * @returns Array<Node> of attachments
+   */
+  static getAttachments(doc: Node): Node[] {
+    const attachments: Node[] = [];
+
+    doc.descendants((node) => {
+      if (node.type.name === "attachment") {
+        attachments.push(node);
+      }
+
+      // Attachments are block nodes, so they are never inside a textblock.
+      return !node.isTextblock;
+    });
+
+    return attachments;
+  }
+
+  /**
+   * Iterates through the document to find all of the tasks and their completion state.
+   *
+   * @param doc Prosemirror document node
+   * @returns Array<Task>
+   */
+  static getTasks(doc: Node): Task[] {
+    const tasks: Task[] = [];
+
+    doc.descendants((node) => {
+      if (!node.isBlock || node.isTextblock) {
+        return false;
+      }
+
+      if (node.type.name === "checkbox_list") {
+        node.content.forEach((listItem) => {
+          let text = "";
+
+          listItem.forEach((contentNode) => {
+            if (contentNode.type.name === "paragraph") {
+              text += contentNode.textContent;
+            }
+          });
+
+          tasks.push({
+            text,
+            completed: listItem.attrs.checked,
+          });
+        });
+      }
+
+      return true;
+    });
+
+    return tasks;
+  }
+
+  /**
+   * Returns a summary of total and completed tasks in the node.
+   *
+   * @param doc Prosemirror document node
+   * @returns Object with completed and total keys
+   */
+  static getTasksSummary(doc: Node): { completed: number; total: number } {
+    let completed = 0;
+    let total = 0;
+
+    doc.descendants((node) => {
+      if (!node.isBlock || node.isTextblock) {
+        return false;
+      }
+
+      if (node.type.name === "checkbox_list") {
+        node.content.forEach((listItem) => {
+          total++;
+          if (listItem.attrs.checked) {
+            completed++;
+          }
+        });
+      }
+
+      return true;
+    });
+
+    return { completed, total };
+  }
+
+  /**
+   * Iterates through the document to find all of the headings and their level.
+   *
+   * @param doc Prosemirror document node
+   * @returns Array<Heading>
+   */
+  static getHeadings(doc: Node) {
+    const headings: Heading[] = [];
+    const slugger = new HeadingSlugger();
+    let tableEnd = 0;
+
+    doc.descendants((node, pos) => {
+      if (node.type.name === "table") {
+        // A nested table must not shrink the range of its outer table.
+        tableEnd = Math.max(tableEnd, pos + node.nodeSize);
+      }
+      if (node.type.name === "heading") {
+        headings.push({
+          title: ProsemirrorHelper.toPlainText(node),
+          level: node.attrs.level,
+          id: slugger.slug(node),
+          inTable: pos < tableEnd,
+        });
+      }
+
+      // Headings are never nested in a textblock.
+      return !node.isTextblock;
+    });
+    return headings;
+  }
+
+  /**
+   * Converts all attachment URLs in the ProsemirrorData to absolute URLs.
+   * This is useful for ensuring that attachments can be accessed correctly
+   * when the document is rendered in a different context or environment.
+   *
+   * @param data The ProsemirrorData object to process
+   * @returns The ProsemirrorData with absolute URLs for attachments
+   */
+  static attachmentsToAbsoluteUrls(data: ProsemirrorData): ProsemirrorData {
+    const regex = new RegExp("^" + attachmentRedirectRegex.source);
+
+    function replace(node: ProsemirrorData) {
+      if (
+        node.type === "image" &&
+        node.attrs?.src &&
+        regex.test(node.attrs.src as string)
+      ) {
+        node.attrs.src = env.URL + node.attrs.src;
+      } else if (
+        node.type === "video" &&
+        node.attrs?.src &&
+        regex.test(node.attrs.src as string)
+      ) {
+        node.attrs.src = env.URL + node.attrs.src;
+      } else if (
+        node.type === "attachment" &&
+        node.attrs?.href &&
+        regex.test(node.attrs.href as string)
+      ) {
+        node.attrs.href = env.URL + node.attrs.href;
+      }
+
+      if (node.content) {
+        node.content = node.content.filter(Boolean);
+        node.content.forEach(replace);
+      }
+
+      return node;
+    }
+
+    return replace(data);
+  }
+
+  /**
+   * Replaces all template variables in the node.
+   *
+   * @param data The ProsemirrorData object to replace variables in
+   * @param user The user to use for replacing variables
+   * @returns The content with variables replaced
+   */
+  static replaceTemplateVariables(data: ProsemirrorData, user: User) {
+    function replace(node: ProsemirrorData) {
+      if (node.type === "text" && node.text) {
+        node.text = TextHelper.replaceTemplateVariables(node.text, user);
+      }
+
+      if (node.content) {
+        node.content = node.content.filter(Boolean);
+        node.content.forEach(replace);
+      }
+
+      return node;
+    }
+
+    return replace(data);
+  }
+
+  /**
+   * Returns true when the predicate holds for every node in the data,
+   * including the root and all descendants.
+   *
+   * @param data The ProsemirrorData object to walk
+   * @param predicate The predicate to test each node against
+   * @returns true when every node passes the predicate
+   */
+  static everyNode(
+    data: ProsemirrorData,
+    predicate: (node: ProsemirrorData) => boolean
+  ): boolean {
+    if (!predicate(data)) {
+      return false;
+    }
+
+    return (data.content ?? []).every(
+      (node) => !!node && ProsemirrorHelper.everyNode(node, predicate)
+    );
+  }
+
+  /**
+   * Returns true if the node contains any non-whitespace text, including the
+   * text of leaf nodes such as mentions. Stops at the first text found.
+   */
+  private static hasText(node: Node): boolean {
+    let found = false;
+
+    node.descendants((child: Node) => {
+      if (found) {
+        return false;
+      }
+
+      if (child.type.spec.leafText) {
+        found = !!String(child.type.spec.leafText(child)).trim();
+      } else if (child.isText) {
+        found = !!child.text?.trim();
+      }
+
+      return !found;
+    });
+
+    return found;
+  }
+}

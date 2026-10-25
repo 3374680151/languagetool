@@ -1,0 +1,20 @@
+import type GroupUser from "@server/models/GroupUser";
+import { presentUser } from ".";
+
+export default function presentGroupUser(
+  membership: GroupUser,
+  options?: { includeUser: boolean }
+) {
+  return {
+    id: `${membership.userId}-${membership.groupId}`,
+    userId: membership.userId,
+    groupId: membership.groupId,
+    permission: membership.permission,
+    createdById: membership.createdById,
+    createdBy: membership.createdBy
+      ? presentUser(membership.createdBy)
+      : undefined,
+    createdAt: membership.createdAt,
+    user: options?.includeUser ? presentUser(membership.user) : undefined,
+  };
+}

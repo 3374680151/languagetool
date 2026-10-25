@@ -1,0 +1,304 @@
+import type { InferAttributes, InferCreationAttributes } from "sequelize";
+import { sortBy } from "es-toolkit/compat";
+import { Op } from "sequelize";
+import { isUUID } from "validator";
+import {
+  AllowNull,
+  DataType,
+  BelongsTo,
+  Column,
+  DefaultScope,
+  ForeignKey,
+  Table,
+  IsNumeric,
+  Length as SimpleLength,
+  BeforeDestroy,
+} from "sequelize-typescript";
+import type { ProsemirrorData, SourceMetadata } from "@shared/types";
+import { DocumentValidation, RevisionValidation } from "@shared/validations";
+import type { APIContext } from "@server/types";
+import Document from "./Document";
+import User from "./User";
+import ParanoidModel from "./base/ParanoidModel";
+import IsHexColor from "./validators/IsHexColor";
+import Length from "./validators/Length";
+import { SkipChangeset } from "./decorators/Changeset";
+
+@DefaultScope(() => ({
+  include: [
+    {
+      model: User,
+      as: "user",
+      paranoid: false,
+    },
+  ],
+}))
+@Table({ tableName: "revisions", modelName: "revision" })
+class Revision extends ParanoidModel<
+  InferAttributes<Revision>,
+  Partial<InferCreationAttributes<Revision>>
+> {
+  @IsNumeric
+  @Column(DataType.SMALLINT)
+  @SkipChangeset
+  version?: number | null;
+
+  /** The editor version at the time of the revision */
+  @SimpleLength({
+    max: 255,
+    msg: `editorVersion must be 255 characters or less`,
+  })
+  @Column(DataType.STRING)
+  @SkipChangeset
+  editorVersion: string | null;
+
+  /** The document title at the time of the revision */
+  @Length({
+    max: DocumentValidation.maxTitleLength,
+    msg: `Revision title must be ${DocumentValidation.maxTitleLength} characters or less`,
+  })
+  @Column(DataType.STRING)
+  @SkipChangeset
+  title: string;
+
+  /** An optional name for the revision */
+  @Length({
+    max: RevisionValidation.maxNameLength,
+    msg: `Revision name must be ${RevisionValidation.maxNameLength} characters or less`,
+  })
+  @Column(DataType.STRING)
+  @SkipChangeset
+  name: string | null;
+
+  /**
+   * The content of the revision as Markdown.
+   *
+   * @deprecated Use `content` instead, or `DocumentHelper.toMarkdown` if
+   * exporting lossy markdown. This column will be removed in a future migration
+   * and is no longer being written.
+   */
+  @Column(DataType.TEXT)
+  @SkipChangeset
+  text: string | null;
+
+  /** The content of the revision as JSON. */
+  @Column(DataType.JSONB)
+  @SkipChangeset
+  content: ProsemirrorData | null;
+
+  /** The icon at the time of the revision. */
+  @Column(DataType.STRING)
+  @SkipChangeset
+  icon: string | null;
+
+  /** The color at the time of the revision. */
+  @IsHexColor
+  @Column(DataType.STRING)
+  @SkipChangeset
+  color: string | null;
+
+  /** Metadata about how the revision came to be, such as the authentication type used. */
+  @AllowNull
+  @Column(DataType.JSONB)
+  @SkipChangeset
+  sourceMetadata: SourceMetadata | null;
+
+  // associations
+
+  @BelongsTo(() => Document, "documentId")
+  document: Document;
+
+  @ForeignKey(() => Document)
+  @Column(DataType.UUID)
+  documentId: string;
+
+  @BelongsTo(() => User, "userId")
+  user: User;
+
+  @ForeignKey(() => User)
+  @Column(DataType.UUID)
+  userId: string;
+
+  /** Array of user IDs who collaborated on this revision */
+  @Column(DataType.ARRAY(DataType.UUID))
+  @SkipChangeset
+  collaboratorIds: string[];
+
+  /**
+   * Get the collaborators for this revision, with the author first and the
+   * others in the order they were recorded.
+   */
+  get collaborators() {
+    const otherCollaboratorIds = (this.collaboratorIds ?? []).filter(
+      (id) => id !== this.userId
+    );
+
+    if (otherCollaboratorIds.length === 0) {
+      return [this.user];
+    }
+
+    return User.findAll({
+      where: {
+        id: {
+          [Op.in]: otherCollaboratorIds,
+        },
+      },
+      paranoid: false,
+    }).then((others) => [
+      this.user,
+      ...sortBy(others, [(user) => otherCollaboratorIds.indexOf(user.id)]),
+    ]);
+  }
+
+  // hooks
+
+  @BeforeDestroy
+  static async clearData(model: Revision) {
+    model.content = null;
+    model.text = null;
+    model.title = "";
+  }
+
+  // static methods
+
+  /**
+   * Find the latest revision for a given document
+   *
+   * @param documentId The document id to find the latest revision for
+   * @returns A Promise that resolves to a Revision model
+   */
+  static findLatest(documentId: string) {
+    return this.findOne({
+      where: {
+        documentId,
+      },
+      order: [["createdAt", "DESC"]],
+    });
+  }
+
+  /**
+   * Find a revision by id that belongs to the given document.
+   *
+   * @param id The id of the revision.
+   * @param documentId The id of the document the revision must belong to.
+   * @returns A Promise that resolves to a Revision model, or null if not found.
+   */
+  static async findByIdForDocument(id: string, documentId: string) {
+    if (!isUUID(id)) {
+      return null;
+    }
+
+    return this.findOne({
+      where: {
+        id,
+        documentId,
+      },
+    });
+  }
+
+  /**
+   * Find the latest revision of a document that a user authored or
+   * collaborated on.
+   *
+   * @param documentId The id of the document.
+   * @param userId The id of the user.
+   * @returns A Promise that resolves to a Revision model, or null if not found.
+   */
+  static findLatestByUser(documentId: string, userId: string) {
+    return this.findOne({
+      where: {
+        documentId,
+        [Op.or]: [{ userId }, { collaboratorIds: { [Op.contains]: [userId] } }],
+      },
+      order: [["createdAt", "DESC"]],
+    });
+  }
+
+  /**
+   * Find the revision that shows a document as it was at a given time, the
+   * latest revision created at or before that time.
+   *
+   * @param documentId The id of the document.
+   * @param date The point in time.
+   * @returns A Promise that resolves to a Revision model, or null if the
+   * document had no revision at that time.
+   */
+  static findAt(documentId: string, date: Date) {
+    return this.findOne({
+      where: {
+        documentId,
+        createdAt: {
+          [Op.lte]: date,
+        },
+      },
+      order: [["createdAt", "DESC"]],
+    });
+  }
+
+  /**
+   * Build a Revision model from a Document model
+   *
+   * @param document The document to build from
+   * @returns A Revision model
+   */
+  static buildFromDocument(document: Document) {
+    return this.build({
+      title: document.title,
+      icon: document.icon,
+      color: document.color,
+      content: document.content,
+      userId: document.lastModifiedById,
+      editorVersion: document.editorVersion,
+      version: document.version,
+      documentId: document.id,
+      // revision time is set to the last time document was touched as this
+      // handler can be debounced in the case of an update
+      createdAt: document.updatedAt,
+    });
+  }
+
+  /**
+   * Create a Revision model from a Document model and save it to the database
+   *
+   * @param ctx context to use for DB operations
+   * @param document The document to create from
+   * @param collaboratorIds Optional array of user IDs who authored this revision
+   * @returns A Promise that resolves when saved
+   */
+  static createFromDocument(
+    ctx: APIContext,
+    document: Document,
+    collaboratorIds?: string[]
+  ) {
+    const revision = this.buildFromDocument(document);
+    const authType = ctx.context.auth?.type;
+    revision.sourceMetadata = authType ? { authType } : null;
+
+    if (collaboratorIds) {
+      revision.collaboratorIds = collaboratorIds;
+    }
+
+    return revision.saveWithCtx(ctx);
+  }
+
+  // instance methods
+
+  /**
+   * Find the revision for the document before this one.
+   *
+   * @returns A Promise that resolves to a Revision, or null if this is the first revision.
+   */
+  before(): Promise<Revision | null> {
+    return (this.constructor as typeof Revision).findOne({
+      where: {
+        documentId: this.documentId,
+        createdAt: {
+          [Op.lt]: this.createdAt,
+        },
+      },
+      order: [["createdAt", "DESC"]],
+    });
+  }
+}
+
+export default Revision;

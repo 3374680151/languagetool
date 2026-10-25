@@ -1,0 +1,550 @@
+import { debounce } from "es-toolkit/compat";
+import { observer } from "mobx-react";
+import * as React from "react";
+import { Trans, useTranslation } from "react-i18next";
+import { toast } from "sonner";
+import styled from "styled-components";
+import { colorPalette } from "@shared/constants";
+import { errToString } from "@shared/utils/error";
+import { GroupPermissionHelper } from "@shared/utils/GroupPermissionHelper";
+import Group from "~/models/Group";
+import type User from "~/models/User";
+import Invite from "~/scenes/Invite";
+import { performBatch } from "~/actions/definitions/common";
+import { Avatar, AvatarSize } from "~/components/Avatar";
+import Badge from "~/components/Badge";
+import Button from "~/components/Button";
+import ButtonLink from "~/components/ButtonLink";
+import ConfirmationDialog from "~/components/ConfirmationDialog";
+import DelayedMount from "~/components/DelayedMount";
+import Empty from "~/components/Empty";
+import Flex from "~/components/Flex";
+import { ResolvedGroupIcon } from "~/components/Icons/GroupIcon";
+import Input from "~/components/Input";
+import { createLazyComponent } from "~/components/LazyLoad";
+import PlaceholderList from "~/components/List/Placeholder";
+import PaginatedList from "~/components/PaginatedList";
+import { ListItem } from "~/components/Sharing/components/ListItem";
+import Text from "~/components/Text";
+import Time from "~/components/Time";
+import useCurrentTeam from "~/hooks/useCurrentTeam";
+import usePolicy from "~/hooks/usePolicy";
+import useRequest from "~/hooks/useRequest";
+import useStores from "~/hooks/useStores";
+import InputMemberPermissionSelect from "~/components/InputMemberPermissionSelect";
+import { GroupPermission } from "@shared/types";
+import { GroupValidation } from "@shared/validations";
+import type { Permission } from "~/types";
+import { EmptySelectValue } from "~/types";
+import type GroupUser from "~/models/GroupUser";
+import Switch from "~/components/Switch";
+import history from "~/utils/history";
+import { settingsPath } from "~/utils/routeHelpers";
+
+const IconPicker = createLazyComponent(() => import("~/components/IconPicker"));
+
+type Props = {
+  group: Group;
+  onSubmit: () => void;
+};
+
+export function CreateGroupDialog() {
+  const { dialogs, groups } = useStores();
+  const { t } = useTranslation();
+  const [name, setName] = React.useState<string | undefined>();
+  const [description, setDescription] = React.useState<string | undefined>();
+  const [icon, setIcon] = React.useState<string | null>(null);
+  const [color, setColor] = React.useState<string | null>(null);
+  const [isSaving, setIsSaving] = React.useState(false);
+
+  const handleIconChange = React.useCallback(
+    (newIcon: string | null, newColor: string | null) => {
+      setIcon(newIcon);
+      setColor(newColor);
+    },
+    []
+  );
+
+  const handleSubmit = React.useCallback(
+    async (ev: React.SyntheticEvent) => {
+      ev.preventDefault();
+      setIsSaving(true);
+
+      const group = new Group(
+        {
+          name,
+          description,
+          icon,
+          color,
+        },
+        groups
+      );
+
+      try {
+        await group.save();
+        dialogs.closeAllModals();
+        history.push(settingsPath("groups", group.id, "members"));
+      } catch (err) {
+        toast.error(errToString(err));
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [dialogs, groups, name, description, icon, color]
+  );
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <Text as="p" type="secondary">
+        <Trans>
+          Groups are for organizing your team. They work best when centered
+          around a function or a responsibility — Support or Engineering for
+          example.
+        </Trans>
+      </Text>
+      <Flex column>
+        <Input
+          type="text"
+          label={t("Name")}
+          onChange={(e) => setName(e.target.value)}
+          value={name}
+          maxLength={GroupValidation.maxNameLength}
+          prefix={
+            <GroupIconPicker
+              icon={icon}
+              color={color}
+              initial={(name ?? "").charAt(0).toUpperCase()}
+              onChange={handleIconChange}
+            />
+          }
+          showCharacterCount
+          required
+          autoFocus
+          flex
+        />
+        <Input
+          type="textarea"
+          label={t("Description")}
+          placeholder={t("Optional")}
+          onChange={(e) => setDescription(e.target.value)}
+          value={description || ""}
+          maxLength={GroupValidation.maxDescriptionLength}
+          flex
+        />
+      </Flex>
+      <Text as="p" type="secondary">
+        <Trans>You’ll be able to add people to the group next.</Trans>
+      </Text>
+
+      <Button type="submit" disabled={isSaving || !name}>
+        {isSaving ? `${t("Creating")}…` : t("Continue")}
+      </Button>
+    </form>
+  );
+}
+
+export function EditGroupDialog({ group, onSubmit }: Props) {
+  const { t } = useTranslation();
+  const [name, setName] = React.useState(group.name);
+  const [description, setDescription] = React.useState(group.description || "");
+  const [icon, setIcon] = React.useState(group.icon);
+  const [color, setColor] = React.useState(group.color);
+  const [disableMentions, setDisableMentions] = React.useState(
+    group.disableMentions || false
+  );
+  const [isSaving, setIsSaving] = React.useState(false);
+  const handleSubmit = React.useCallback(
+    async (ev: React.SyntheticEvent) => {
+      ev.preventDefault();
+      setIsSaving(true);
+
+      try {
+        await group.save({
+          name,
+          description,
+          icon,
+          color,
+          disableMentions,
+        });
+        onSubmit();
+      } catch (err) {
+        toast.error(errToString(err));
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [group, onSubmit, name, description, icon, color, disableMentions]
+  );
+
+  const handleIconChange = React.useCallback(
+    (newIcon: string | null, newColor: string | null) => {
+      setIcon(newIcon);
+      setColor(newColor);
+    },
+    []
+  );
+
+  const handleNameChange = React.useCallback(
+    (ev: React.ChangeEvent<HTMLInputElement>) => {
+      setName(ev.target.value);
+    },
+    []
+  );
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <Text as="p" type="secondary">
+        {group.isExternallyManaged ? (
+          <Trans>
+            This group is managed by an external authentication provider. The
+            name and description are synced automatically and cannot be changed.
+          </Trans>
+        ) : (
+          <Trans>
+            You can edit the name of this group at any time, however doing so
+            too often might confuse your teammates.
+          </Trans>
+        )}
+      </Text>
+      <Flex column>
+        <Input
+          type="text"
+          label={t("Name")}
+          onChange={handleNameChange}
+          value={name}
+          maxLength={GroupValidation.maxNameLength}
+          prefix={
+            <GroupIconPicker
+              icon={icon}
+              color={color}
+              initial={name.charAt(0).toUpperCase()}
+              onChange={handleIconChange}
+            />
+          }
+          showCharacterCount
+          disabled={group.isExternallyManaged}
+          required
+          autoFocus
+          flex
+        />
+        <Input
+          type="textarea"
+          label={t("Description")}
+          placeholder={t("Optional")}
+          onChange={(e) => setDescription(e.target.value)}
+          value={description}
+          maxLength={GroupValidation.maxDescriptionLength}
+          disabled={group.isExternallyManaged}
+          flex
+        />
+        <Switch
+          id="mentions"
+          label={t("Hidden")}
+          note={t(
+            "Prevent this group from being mentionable in documents or comments"
+          )}
+          checked={disableMentions}
+          onChange={setDisableMentions}
+        />
+      </Flex>
+
+      <Button type="submit" disabled={isSaving || !name}>
+        {isSaving ? `${t("Saving")}…` : t("Save")}
+      </Button>
+    </form>
+  );
+}
+
+export function DeleteGroupDialog({
+  groups,
+  onSubmit,
+}: {
+  groups: Group[];
+  onSubmit: () => void;
+}) {
+  const { t } = useTranslation();
+
+  const handleSubmit = async () => {
+    await performBatch(groups, (group) => group.delete());
+    onSubmit();
+  };
+
+  return (
+    <ConfirmationDialog
+      onSubmit={handleSubmit}
+      submitText={t("I’m sure – Delete")}
+      savingText={`${t("Deleting")}…`}
+      danger
+    >
+      {groups.length === 1 ? (
+        <Trans
+          defaults="Are you sure about that? Deleting the <em>{{groupName}}</em> group will cause its members to lose access to collections and documents that it is associated with."
+          values={{
+            groupName: groups[0].name,
+          }}
+          components={{
+            em: <strong />,
+          }}
+        />
+      ) : (
+        t(
+          "Are you sure about that? Deleting {{ count }} group will cause their members to lose access to collections and documents that they are associated with.",
+          { count: groups.length }
+        )
+      )}
+    </ConfirmationDialog>
+  );
+}
+
+export const AddPeopleToGroupDialog = observer(function ({
+  group,
+}: Pick<Props, "group">) {
+  const { dialogs, users, groupUsers } = useStores();
+  const { t } = useTranslation();
+  const team = useCurrentTeam();
+  const can = usePolicy(team);
+  const [query, setQuery] = React.useState("");
+
+  const debouncedFetch = React.useMemo(
+    () => debounce((q) => users.fetchPage({ query: q }), 250),
+    [users]
+  );
+
+  const handleFilter = React.useCallback(
+    (ev: React.ChangeEvent<HTMLInputElement>) => {
+      const updatedQuery = ev.target.value;
+      setQuery(updatedQuery);
+      void debouncedFetch(updatedQuery);
+    },
+    [debouncedFetch]
+  );
+
+  const handleAddUser = React.useCallback(
+    async (user: User) => {
+      try {
+        await groupUsers.create({
+          groupId: group.id,
+          userId: user.id,
+        });
+
+        toast.success(
+          t(`{{userName}} was added to the group`, {
+            userName: user.name,
+          }),
+          {
+            icon: <Avatar model={user} size={AvatarSize.Toast} />,
+          }
+        );
+      } catch (_err) {
+        toast.error(t("Could not add user"));
+      }
+    },
+    [t, groupUsers, group.id]
+  );
+
+  const handleInvitePeople = React.useCallback(() => {
+    dialogs.openModal({
+      title: t("Invite people"),
+      content: <Invite onSubmit={dialogs.closeAllModals} />,
+      replace: true,
+    });
+  }, [t, dialogs]);
+
+  const { loading } = useRequest(
+    React.useCallback(
+      () => groupUsers.fetchAll({ id: group.id }),
+      [groupUsers, group]
+    ),
+    true
+  );
+
+  return (
+    <Flex column>
+      <Text as="p" type="secondary">
+        {t(
+          "Add members below to give them access to the group. Need to add someone who’s not yet a member?"
+        )}{" "}
+        {can.inviteUser ? (
+          <ButtonLink onClick={handleInvitePeople}>
+            {t("Invite them to {{teamName}}", {
+              teamName: team.name,
+            })}
+          </ButtonLink>
+        ) : (
+          t("Ask an admin to invite them first")
+        )}
+        .
+      </Text>
+      <Input
+        type="search"
+        placeholder={`${t("Search by name")}…`}
+        value={query}
+        onChange={handleFilter}
+        label={t("Search people")}
+        labelHidden
+        autoFocus
+        flex
+      />
+      {loading ? (
+        <DelayedMount>
+          <PlaceholderList count={5} />
+        </DelayedMount>
+      ) : (
+        <PaginatedList<User>
+          empty={
+            query ? (
+              <Empty>{t("No people matching your search")}</Empty>
+            ) : (
+              <Empty>{t("No people left to add")}</Empty>
+            )
+          }
+          items={users.notInGroup(group.id, query)}
+          fetch={query ? undefined : users.fetchPage}
+          renderItem={(item) => (
+            <GroupMemberListItem
+              key={item.id}
+              user={item}
+              group={group}
+              groupUser={undefined}
+              onAdd={() => handleAddUser(item)}
+            />
+          )}
+        />
+      )}
+    </Flex>
+  );
+});
+
+type GroupMemberListItemProps = {
+  user: User;
+  group: Group;
+  groupUser: GroupUser | undefined;
+  onAdd?: () => Promise<void>;
+  onRemove?: () => Promise<void>;
+};
+
+const GroupMemberListItem = observer(function ({
+  user,
+  group,
+  groupUser,
+  onAdd,
+}: GroupMemberListItemProps) {
+  const { t } = useTranslation();
+  const { groupUsers } = useStores();
+  const can = usePolicy(group);
+
+  const permissions = React.useMemo(
+    () =>
+      [
+        {
+          label: GroupPermissionHelper.displayName(GroupPermission.Admin, t),
+          value: GroupPermission.Admin,
+        },
+        {
+          label: GroupPermissionHelper.displayName(GroupPermission.Member, t),
+          value: GroupPermission.Member,
+        },
+        {
+          divider: true,
+          label: t("Remove"),
+          value: EmptySelectValue,
+        },
+      ] as Permission[],
+    [t]
+  );
+
+  return (
+    <ListItem
+      title={user.name}
+      subtitle={
+        <>
+          {user.lastActiveAt ? (
+            <Trans>
+              Active <Time dateTime={user.lastActiveAt} /> ago
+            </Trans>
+          ) : (
+            t("Never signed in")
+          )}{" "}
+          {user.isInvited && <Badge>{t("Invited")}</Badge>}
+          {user.isAdmin && <Badge primary={user.isAdmin}>{t("Admin")}</Badge>}
+        </>
+      }
+      image={<Avatar model={user} size={AvatarSize.Large} />}
+      actions={
+        <Flex align="center">
+          {onAdd ? (
+            <Button onClick={onAdd} neutral>
+              {t("Add")}
+            </Button>
+          ) : (
+            <div style={{ marginRight: -8 }}>
+              <InputMemberPermissionSelect
+                permissions={permissions}
+                onChange={async (
+                  permission: GroupPermission | typeof EmptySelectValue
+                ) => {
+                  try {
+                    if (permission === EmptySelectValue) {
+                      await groupUsers.delete({
+                        userId: user.id,
+                        groupId: group.id,
+                      });
+                    } else {
+                      await groupUsers.update({
+                        userId: user.id,
+                        groupId: group.id,
+                        permission,
+                      });
+                    }
+                  } catch (err) {
+                    toast.error(errToString(err));
+                    return false;
+                  }
+                  return true;
+                }}
+                disabled={!can.update || group.isExternallyManaged}
+                value={groupUser?.permission}
+              />
+            </div>
+          )}
+        </Flex>
+      }
+    />
+  );
+});
+
+type GroupIconPickerProps = {
+  icon: string | null;
+  color: string | null;
+  initial: string;
+  onChange: (icon: string | null, color: string | null) => void;
+};
+
+function GroupIconPicker({
+  icon,
+  color,
+  initial,
+  onChange,
+}: GroupIconPickerProps) {
+  const fallback = <ResolvedGroupIcon group={{ icon, color, initial }} />;
+
+  return (
+    <React.Suspense fallback={fallback}>
+      <StyledIconPicker
+        icon={icon}
+        color={color ?? colorPalette[0]}
+        initial={initial}
+        popoverPosition="right"
+        onChange={onChange}
+        allowDelete
+      >
+        {icon ? undefined : fallback}
+      </StyledIconPicker>
+    </React.Suspense>
+  );
+}
+
+const StyledIconPicker = styled(IconPicker.Component)`
+  margin-left: 4px;
+  margin-right: 4px;
+`;

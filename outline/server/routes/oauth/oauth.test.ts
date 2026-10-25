@@ -1,0 +1,1032 @@
+import crypto, { randomUUID } from "node:crypto";
+import { http, HttpResponse } from "msw";
+import sharedEnv from "@shared/env";
+import { TeamPreference } from "@shared/types";
+import { OAuthClientValidation } from "@shared/validations";
+import env from "@server/env";
+import type { User } from "@server/models";
+import { OAuthClient } from "@server/models";
+import UploadOAuthClientLogoTask from "@server/queues/tasks/UploadOAuthClientLogoTask";
+import { mcpHeaders, mcpRequest } from "@server/test/McpHelper";
+import { server as msw } from "@server/test/msw";
+import {
+  buildApiKey,
+  buildOAuthClient,
+  buildTeam,
+  buildUser,
+  buildSubdomain,
+} from "@server/test/factories";
+import { getTestServer, toFormData } from "@server/test/support";
+
+const server = getTestServer();
+
+describe("#oauth.register", () => {
+  let team: Awaited<ReturnType<typeof buildTeam>>;
+  let subdomain: string;
+
+  beforeEach(async () => {
+    subdomain = buildSubdomain();
+    team = await buildTeam({ subdomain });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("should register a public client", async () => {
+    const res = await server.post("/oauth/register", {
+      body: {
+        client_name: "Test MCP Client",
+        redirect_uris: ["https://example.com/callback"],
+      },
+      headers: {
+        host: `${subdomain}.outline.dev`,
+      },
+    });
+
+    expect(res.status).toEqual(201);
+    const body = await res.json();
+    expect(body.client_id).toBeTruthy();
+    expect(body.client_secret).toBeUndefined();
+    expect(body.client_id_issued_at).toBeGreaterThan(0);
+    expect(body.client_secret_expires_at).toBeUndefined();
+    expect(body.client_name).toEqual("Test MCP Client");
+    expect(body.redirect_uris).toEqual(["https://example.com/callback"]);
+    expect(body.grant_types).toEqual(["authorization_code", "refresh_token"]);
+    expect(body.response_types).toEqual(["code"]);
+    expect(body.token_endpoint_auth_method).toEqual("none");
+    expect(body.registration_access_token).toBeTruthy();
+    expect(body.registration_access_token).toMatch(/^ol_rat_/);
+    expect(body.registration_client_uri).toContain(
+      `/oauth/register/${body.client_id}`
+    );
+
+    const client = await OAuthClient.findByClientId(body.client_id);
+    expect(client).not.toBeNull();
+    expect(client!.teamId).toEqual(team.id);
+    expect(client!.createdById).toBeNull();
+    expect(client!.clientType).toEqual("public");
+    expect(client!.published).toEqual(false);
+  });
+
+  it("should register a native app client with a private-use scheme redirect URI", async () => {
+    const res = await server.post("/oauth/register", {
+      body: {
+        client_name: "Native App",
+        redirect_uris: ["com.example.app:/oauth2redirect"],
+      },
+      headers: {
+        host: `${subdomain}.outline.dev`,
+      },
+    });
+
+    expect(res.status).toEqual(201);
+    const body = await res.json();
+    expect(body.redirect_uris).toEqual(["com.example.app:/oauth2redirect"]);
+  });
+
+  it("should register a confidential client", async () => {
+    const res = await server.post("/oauth/register", {
+      body: {
+        client_name: "Confidential Client",
+        redirect_uris: ["https://example.com/callback"],
+        token_endpoint_auth_method: "client_secret_post",
+      },
+      headers: {
+        host: `${subdomain}.outline.dev`,
+      },
+    });
+
+    expect(res.status).toEqual(201);
+    const body = await res.json();
+    expect(body.client_id).toBeTruthy();
+    expect(body.client_secret).toBeTruthy();
+    expect(body.token_endpoint_auth_method).toEqual("client_secret_post");
+
+    const client = await OAuthClient.findByClientId(body.client_id);
+    expect(client!.clientType).toEqual("confidential");
+  });
+
+  it("should include client_uri and upload logo_uri in the background", async () => {
+    const schedule = vi.spyOn(
+      UploadOAuthClientLogoTask.prototype,
+      "scheduleOptional"
+    );
+    const res = await server.post("/oauth/register", {
+      body: {
+        client_name: "Branded Client",
+        redirect_uris: ["https://example.com/callback"],
+        client_uri: "https://example.com",
+        logo_uri: "https://example.com/logo.png",
+      },
+      headers: {
+        host: `${subdomain}.outline.dev`,
+      },
+    });
+
+    expect(res.status).toEqual(201);
+    const body = await res.json();
+    expect(body.client_uri).toEqual("https://example.com");
+    expect(body.logo_uri).toBeUndefined();
+
+    const client = await OAuthClient.findByClientId(body.client_id);
+    expect(client?.avatarUrl).toBeNull();
+    expect(schedule).toHaveBeenCalledWith({
+      oauthClientId: client?.id,
+      logoUrl: "https://example.com/logo.png",
+    });
+  });
+
+  it("should accept registration without client_name", async () => {
+    const res = await server.post("/oauth/register", {
+      body: {
+        redirect_uris: ["https://example.com/callback"],
+      },
+      headers: {
+        host: `${subdomain}.outline.dev`,
+      },
+    });
+
+    expect(res.status).toEqual(201);
+    const body = await res.json();
+    expect(body.client_id).toBeTruthy();
+    expect(body.client_name).toEqual("Untitled application");
+  });
+
+  it("should reject missing redirect_uris", async () => {
+    const res = await server.post("/oauth/register", {
+      body: {
+        client_name: "Test Client",
+      },
+      headers: {
+        host: `${subdomain}.outline.dev`,
+      },
+    });
+
+    expect(res.status).toEqual(400);
+  });
+
+  it("should reject invalid redirect_uris", async () => {
+    const res = await server.post("/oauth/register", {
+      body: {
+        client_name: "Test Client",
+        redirect_uris: ["not-a-url"],
+      },
+      headers: {
+        host: `${subdomain}.outline.dev`,
+      },
+    });
+
+    expect(res.status).toEqual(400);
+  });
+
+  it("should reject empty redirect_uris array", async () => {
+    const res = await server.post("/oauth/register", {
+      body: {
+        client_name: "Test Client",
+        redirect_uris: [],
+      },
+      headers: {
+        host: `${subdomain}.outline.dev`,
+      },
+    });
+
+    expect(res.status).toEqual(400);
+  });
+
+  it("should allow the maximum number of redirect_uris", async () => {
+    const res = await server.post("/oauth/register", {
+      body: {
+        client_name: "Test Client",
+        redirect_uris: Array.from(
+          { length: OAuthClientValidation.maxRedirectUris },
+          (_, index) => `https://example.com/callback/${index}`
+        ),
+      },
+      headers: {
+        host: `${subdomain}.outline.dev`,
+      },
+    });
+
+    expect(res.status).toEqual(201);
+  });
+
+  it("should reject duplicate redirect_uris", async () => {
+    const res = await server.post("/oauth/register", {
+      body: {
+        client_name: "Test Client",
+        redirect_uris: [
+          "https://example.com/callback",
+          "https://example.com/callback",
+        ],
+      },
+      headers: {
+        host: `${subdomain}.outline.dev`,
+      },
+    });
+
+    expect(res.status).toEqual(400);
+  });
+
+  it("should reject too many redirect_uris and report the received count", async () => {
+    const count = OAuthClientValidation.maxRedirectUris + 1;
+    const res = await server.post("/oauth/register", {
+      body: {
+        client_name: "Test Client",
+        redirect_uris: Array.from(
+          { length: count },
+          (_, index) => `https://example.com/callback/${index}`
+        ),
+      },
+      headers: {
+        host: `${subdomain}.outline.dev`,
+      },
+    });
+
+    expect(res.status).toEqual(400);
+    const body = await res.json();
+    expect(body.error).toEqual("invalid_request");
+    expect(body.error_description).toEqual(
+      `redirect_uris: expected array to have <=${OAuthClientValidation.maxRedirectUris} items, received ${count}`
+    );
+  });
+
+  it("should reject unsupported grant types", async () => {
+    const res = await server.post("/oauth/register", {
+      body: {
+        client_name: "Test Client",
+        redirect_uris: ["https://example.com/callback"],
+        grant_types: ["client_credentials"],
+      },
+      headers: {
+        host: `${subdomain}.outline.dev`,
+      },
+    });
+
+    expect(res.status).toEqual(400);
+  });
+
+  it("should return 404 when team is not found for subdomain", async () => {
+    const res = await server.post("/oauth/register", {
+      body: {
+        client_name: "Test Client",
+        redirect_uris: ["https://example.com/callback"],
+        grant_types: ["authorization_code"],
+      },
+      headers: {
+        // Use an invalid subdomain so that no team is found in the context
+        host: `invalid-${subdomain}.outline.dev`,
+      },
+    });
+
+    expect(res.status).toEqual(404);
+  });
+});
+
+/**
+ * Helper to register a client and return the response body including
+ * registration_access_token and client_id.
+ */
+async function registerClient(
+  server: ReturnType<typeof getTestServer>,
+  subdomain: string,
+  overrides: Record<string, unknown> = {}
+) {
+  const res = await server.post("/oauth/register", {
+    body: {
+      client_name: "Test Client",
+      redirect_uris: ["https://example.com/callback"],
+      ...overrides,
+    },
+    headers: {
+      host: `${subdomain}.outline.dev`,
+    },
+  });
+  return res.json();
+}
+
+describe("#oauth.register management (RFC 7592)", () => {
+  let subdomain: string;
+
+  beforeEach(async () => {
+    subdomain = buildSubdomain();
+    await buildTeam({ subdomain });
+  });
+
+  describe("GET /oauth/register/:clientId", () => {
+    it("should return client metadata", async () => {
+      const registered = await registerClient(server, subdomain);
+      const res = await server.get(`/oauth/register/${registered.client_id}`, {
+        headers: {
+          Authorization: `Bearer ${registered.registration_access_token}`,
+        },
+      });
+
+      expect(res.status).toEqual(200);
+      const body = await res.json();
+      expect(body.client_id).toEqual(registered.client_id);
+      expect(body.client_name).toEqual("Test Client");
+      expect(body.redirect_uris).toEqual(["https://example.com/callback"]);
+      // Per RFC 7592 Section 3.1, registration_access_token MUST NOT be included in GET
+      expect(body.registration_access_token).toBeUndefined();
+    });
+
+    it("should not include client_secret in read response for confidential clients", async () => {
+      const registered = await registerClient(server, subdomain, {
+        client_name: "Confidential Read Test",
+        token_endpoint_auth_method: "client_secret_post",
+      });
+
+      // Initial registration response should include client_secret
+      expect(registered.client_secret).toBeTruthy();
+
+      const res = await server.get(`/oauth/register/${registered.client_id}`, {
+        headers: {
+          Authorization: `Bearer ${registered.registration_access_token}`,
+        },
+      });
+
+      expect(res.status).toEqual(200);
+      const body = await res.json();
+      // Per RFC 7592 Section 3.1, client_secret SHOULD NOT be included in GET
+      expect(body.client_secret).toBeUndefined();
+      expect(body.client_secret_expires_at).toBeUndefined();
+    });
+
+    it("should not include client_secret in read response for public clients", async () => {
+      const registered = await registerClient(server, subdomain);
+
+      const res = await server.get(`/oauth/register/${registered.client_id}`, {
+        headers: {
+          Authorization: `Bearer ${registered.registration_access_token}`,
+        },
+      });
+
+      expect(res.status).toEqual(200);
+      const body = await res.json();
+      expect(body.client_secret).toBeUndefined();
+      expect(body.client_secret_expires_at).toBeUndefined();
+    });
+
+    it("should return 401 without authorization header", async () => {
+      const registered = await registerClient(server, subdomain);
+      const res = await server.get(`/oauth/register/${registered.client_id}`);
+
+      expect(res.status).toEqual(401);
+    });
+
+    it("should return 401 with invalid token", async () => {
+      const registered = await registerClient(server, subdomain);
+      const res = await server.get(`/oauth/register/${registered.client_id}`, {
+        headers: {
+          Authorization: "Bearer ol_rat_invalidtoken",
+        },
+      });
+
+      expect(res.status).toEqual(401);
+    });
+
+    it("should return 401 when token does not match clientId", async () => {
+      const client1 = await registerClient(server, subdomain);
+      const client2 = await registerClient(server, subdomain, {
+        client_name: "Other Client",
+      });
+      const res = await server.get(`/oauth/register/${client2.client_id}`, {
+        headers: {
+          Authorization: `Bearer ${client1.registration_access_token}`,
+        },
+      });
+
+      expect(res.status).toEqual(401);
+    });
+  });
+
+  describe("PUT /oauth/register/:clientId", () => {
+    it("should update client metadata", async () => {
+      const registered = await registerClient(server, subdomain);
+      const res = await server.put(`/oauth/register/${registered.client_id}`, {
+        body: {
+          client_name: "Updated Client",
+          redirect_uris: ["https://example.com/new-callback"],
+        },
+        headers: {
+          Authorization: `Bearer ${registered.registration_access_token}`,
+        },
+      });
+
+      expect(res.status).toEqual(200);
+      const body = await res.json();
+      expect(body.client_name).toEqual("Updated Client");
+      expect(body.redirect_uris).toEqual(["https://example.com/new-callback"]);
+      expect(body.client_id).toEqual(registered.client_id);
+    });
+
+    it("should rotate registration_access_token", async () => {
+      const registered = await registerClient(server, subdomain);
+      const res = await server.put(`/oauth/register/${registered.client_id}`, {
+        body: {
+          client_name: "Updated Client",
+          redirect_uris: ["https://example.com/callback"],
+        },
+        headers: {
+          Authorization: `Bearer ${registered.registration_access_token}`,
+        },
+      });
+
+      const body = await res.json();
+      expect(body.registration_access_token).toBeTruthy();
+      expect(body.registration_access_token).not.toEqual(
+        registered.registration_access_token
+      );
+      expect(body.registration_client_uri).toContain(
+        `/oauth/register/${registered.client_id}`
+      );
+
+      // Old token should no longer work
+      const res2 = await server.get(`/oauth/register/${registered.client_id}`, {
+        headers: {
+          Authorization: `Bearer ${registered.registration_access_token}`,
+        },
+      });
+      expect(res2.status).toEqual(401);
+
+      // New token should work
+      const res3 = await server.get(`/oauth/register/${registered.client_id}`, {
+        headers: {
+          Authorization: `Bearer ${body.registration_access_token}`,
+        },
+      });
+      expect(res3.status).toEqual(200);
+    });
+
+    it("should return 401 without authorization", async () => {
+      const registered = await registerClient(server, subdomain);
+      const res = await server.put(`/oauth/register/${registered.client_id}`, {
+        body: {
+          client_name: "Updated Client",
+          redirect_uris: ["https://example.com/callback"],
+        },
+      });
+
+      expect(res.status).toEqual(401);
+    });
+
+    it("should reject invalid body", async () => {
+      const registered = await registerClient(server, subdomain);
+      const res = await server.put(`/oauth/register/${registered.client_id}`, {
+        body: {
+          client_name: "",
+          redirect_uris: [],
+        },
+        headers: {
+          Authorization: `Bearer ${registered.registration_access_token}`,
+        },
+      });
+
+      expect(res.status).toEqual(400);
+    });
+  });
+
+  describe("DELETE /oauth/register/:clientId", () => {
+    it("should delete the client", async () => {
+      const registered = await registerClient(server, subdomain);
+      const res = await server.delete(
+        `/oauth/register/${registered.client_id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${registered.registration_access_token}`,
+          },
+        }
+      );
+
+      expect(res.status).toEqual(204);
+
+      // Client should no longer be findable
+      const client = await OAuthClient.findByClientId(registered.client_id);
+      expect(client).toBeNull();
+    });
+
+    it("should return 401 without authorization", async () => {
+      const registered = await registerClient(server, subdomain);
+      const res = await server.delete(
+        `/oauth/register/${registered.client_id}`
+      );
+
+      expect(res.status).toEqual(401);
+    });
+  });
+});
+
+describe("GET /.well-known/oauth-authorization-server", () => {
+  it("should return OAuth metadata", async () => {
+    const res = await server.get("/.well-known/oauth-authorization-server");
+
+    expect(res.status).toEqual(200);
+    const body = await res.json();
+    expect(body.issuer).toBeTruthy();
+    expect(body.authorization_endpoint).toContain("/oauth/authorize");
+    expect(body.token_endpoint).toContain("/oauth/token");
+    expect(body.revocation_endpoint).toContain("/oauth/revoke");
+    expect(body.client_id_metadata_document_supported).toBe(true);
+    expect(body.response_types_supported).toEqual(["code"]);
+    expect(body.grant_types_supported).toEqual([
+      "authorization_code",
+      "refresh_token",
+    ]);
+    expect(body.token_endpoint_auth_methods_supported).toEqual([
+      "client_secret_post",
+      "none",
+    ]);
+    expect(body.code_challenge_methods_supported).toEqual(["S256"]);
+    expect(body.scopes_supported).toEqual(["read", "write"]);
+  });
+
+  it("should not advertise registration on the root domain", async () => {
+    const res = await server.get("/.well-known/oauth-authorization-server");
+
+    const body = await res.json();
+    expect(body.registration_endpoint).toBeUndefined();
+    expect(body.client_id_metadata_document_supported).toBe(true);
+  });
+
+  it("should advertise registration on a workspace subdomain", async () => {
+    const team = await buildTeam({ subdomain: buildSubdomain() });
+
+    const res = await server.get("/.well-known/oauth-authorization-server", {
+      headers: { host: `${team.subdomain}.outline.dev` },
+    });
+
+    const body = await res.json();
+    expect(body.registration_endpoint).toContain("/oauth/register");
+    expect(body.client_id_metadata_document_supported).toBe(true);
+  });
+
+  it("should not advertise registration or metadata documents when MCP is disabled", async () => {
+    const team = await buildTeam({
+      subdomain: buildSubdomain(),
+      preferences: { [TeamPreference.MCP]: false },
+    });
+
+    const res = await server.get("/.well-known/oauth-authorization-server", {
+      headers: { host: `${team.subdomain}.outline.dev` },
+    });
+
+    const body = await res.json();
+    expect(body.registration_endpoint).toBeUndefined();
+    expect(body.client_id_metadata_document_supported).toBe(false);
+  });
+
+  it("should return OAuth metadata at /mcp suffix path", async () => {
+    const res = await server.get("/.well-known/oauth-authorization-server/mcp");
+
+    expect(res.status).toEqual(200);
+    const body = await res.json();
+    expect(body.issuer).toBeTruthy();
+    expect(body.authorization_endpoint).toContain("/oauth/authorize");
+    expect(body.token_endpoint).toContain("/oauth/token");
+  });
+
+  it("should include port in URLs when configured with a custom port (self-hosted)", async () => {
+    const originalUrl = env.URL;
+    env.URL = sharedEnv.URL = "https://example.com:444";
+
+    try {
+      const res = await server.get("/.well-known/oauth-authorization-server");
+
+      expect(res.status).toEqual(200);
+      const body = await res.json();
+      expect(body.issuer).toContain(":444");
+      expect(body.authorization_endpoint).toContain(":444");
+      expect(body.token_endpoint).toContain(":444");
+      expect(body.revocation_endpoint).toContain(":444");
+    } finally {
+      env.URL = sharedEnv.URL = originalUrl;
+    }
+  });
+});
+
+describe("GET /.well-known/oauth-protected-resource", () => {
+  it("should return protected resource metadata", async () => {
+    const res = await server.get("/.well-known/oauth-protected-resource");
+
+    expect(res.status).toEqual(200);
+    const body = await res.json();
+    expect(body.resource).toContain("/mcp");
+    expect(body.authorization_servers).toHaveLength(1);
+    expect(body.scopes_supported).toEqual(["read", "write"]);
+    expect(body.bearer_methods_supported).toEqual(["header"]);
+  });
+
+  it("should return protected resource metadata at /mcp suffix path", async () => {
+    const res = await server.get("/.well-known/oauth-protected-resource/mcp");
+
+    expect(res.status).toEqual(200);
+    const body = await res.json();
+    expect(body.resource).toContain("/mcp");
+    expect(body.authorization_servers).toHaveLength(1);
+  });
+
+  it("should return 404 when MCP is disabled", async () => {
+    const team = await buildTeam({
+      subdomain: buildSubdomain(),
+      preferences: { [TeamPreference.MCP]: false },
+    });
+
+    const res = await server.get("/.well-known/oauth-protected-resource", {
+      headers: { host: `${team.subdomain}.outline.dev` },
+    });
+
+    expect(res.status).toEqual(404);
+  });
+
+  it("should include port in URLs when configured with a custom port (self-hosted)", async () => {
+    const originalUrl = env.URL;
+    env.URL = sharedEnv.URL = "https://example.com:444";
+
+    try {
+      const res = await server.get("/.well-known/oauth-protected-resource");
+
+      expect(res.status).toEqual(200);
+      const body = await res.json();
+      expect(body.resource).toContain(":444");
+      expect(body.authorization_servers[0]).toContain(":444");
+    } finally {
+      env.URL = sharedEnv.URL = originalUrl;
+    }
+  });
+});
+
+describe("POST /oauth/authorize", () => {
+  it("should not accept an API key in place of a session", async () => {
+    const user = await buildUser();
+    const client = await buildOAuthClient({ teamId: user.teamId });
+    const apiKey = await buildApiKey({ userId: user.id, scope: ["write"] });
+
+    const res = await server.post("/oauth/authorize", {
+      redirect: "manual",
+      headers: { authorization: `Bearer ${apiKey.value}` },
+      body: {
+        client_id: client.clientId,
+        response_type: "code",
+        redirect_uri: client.redirectUris[0],
+        state: "state",
+        scope: "read write",
+      },
+    });
+
+    expect(res.status).toEqual(403);
+    expect(res.headers.get("location")).toBeNull();
+  });
+
+  it("should issue an authorization code for a session", async () => {
+    const user = await buildUser();
+    const client = await buildOAuthClient({ teamId: user.teamId });
+
+    const res = await server.post("/oauth/authorize", user, {
+      redirect: "manual",
+      body: {
+        client_id: client.clientId,
+        response_type: "code",
+        redirect_uri: client.redirectUris[0],
+        state: "state",
+        scope: "read",
+      },
+    });
+
+    expect(res.status).toEqual(302);
+    expect(res.headers.get("location")).toContain("code=");
+  });
+
+  it("should not issue an authorization code to a dynamically registered client when MCP is disabled", async () => {
+    const team = await buildTeam({
+      preferences: { [TeamPreference.MCP]: false },
+    });
+    const user = await buildUser({ teamId: team.id });
+    const client = await buildOAuthClient({
+      teamId: team.id,
+      createdById: null,
+    });
+
+    const res = await server.post("/oauth/authorize", user, {
+      redirect: "manual",
+      body: {
+        client_id: client.clientId,
+        response_type: "code",
+        redirect_uri: client.redirectUris[0],
+        state: "state",
+        scope: "read",
+      },
+    });
+
+    expect(res.status).toEqual(403);
+    expect(res.headers.get("location")).toBeNull();
+  });
+
+  it("should issue an authorization code to a user created client when MCP is disabled", async () => {
+    const team = await buildTeam({
+      preferences: { [TeamPreference.MCP]: false },
+    });
+    const user = await buildUser({ teamId: team.id });
+    const client = await buildOAuthClient({ teamId: team.id });
+
+    const res = await server.post("/oauth/authorize", user, {
+      redirect: "manual",
+      body: {
+        client_id: client.clientId,
+        response_type: "code",
+        redirect_uri: client.redirectUris[0],
+        state: "state",
+        scope: "read",
+      },
+    });
+
+    expect(res.status).toEqual(302);
+    expect(res.headers.get("location")).toContain("code=");
+  });
+
+  it("should redirect to a private-use scheme redirect URI", async () => {
+    const team = await buildTeam();
+    const user = await buildUser({ teamId: team.id });
+    const client = await buildOAuthClient({
+      teamId: team.id,
+      redirectUris: ["com.example.app:/oauth2redirect"],
+    });
+
+    const res = await server.post("/oauth/authorize", user, {
+      redirect: "manual",
+      body: {
+        client_id: client.clientId,
+        response_type: "code",
+        redirect_uri: "com.example.app:/oauth2redirect",
+        state: "state",
+        scope: "read",
+      },
+    });
+
+    expect(res.status).toEqual(302);
+    const location = res.headers.get("location");
+    expect(location).toMatch(/^com\.example\.app:\/oauth2redirect\?/);
+    expect(location).toContain("code=");
+    expect(location).toContain("state=state");
+  });
+});
+
+describe("client ID metadata documents", () => {
+  const redirectUri = "https://example.com/callback";
+  const codeVerifier = crypto.randomBytes(32).toString("base64url");
+  const codeChallenge = crypto
+    .createHash("sha256")
+    .update(codeVerifier)
+    .digest("base64url");
+
+  const mockMetadataDocument = (clientId: string) =>
+    msw.use(
+      http.get(clientId, () =>
+        HttpResponse.json({
+          client_id: clientId,
+          client_name: "Example MCP Client",
+          redirect_uris: [redirectUri],
+          token_endpoint_auth_method: "none",
+        })
+      )
+    );
+
+  const authorize = (user: User, subdomain: string, clientId: string) =>
+    server.post("/oauth/authorize", user, {
+      redirect: "manual",
+      headers: { host: `${subdomain}.outline.dev` },
+      body: {
+        client_id: clientId,
+        response_type: "code",
+        redirect_uri: redirectUri,
+        state: "state",
+        scope: "read write",
+        code_challenge: codeChallenge,
+        code_challenge_method: "S256",
+      },
+    });
+
+  const token = (body: Record<string, string>) =>
+    server.post("/oauth/token", {
+      headers: {
+        host: "app.outline.dev",
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: toFormData(body),
+    });
+
+  it("should authorize on a subdomain, exchange and refresh at the root, then call MCP", async () => {
+    const subdomain = buildSubdomain();
+    const team = await buildTeam({ subdomain });
+    const user = await buildUser({ teamId: team.id });
+    const clientId = `https://${randomUUID()}.example.com/oauth/client.json`;
+    mockMetadataDocument(clientId);
+
+    const authorizeRes = await authorize(user, subdomain, clientId);
+    expect(authorizeRes.status).toEqual(302);
+    const location = new URL(authorizeRes.headers.get("location") ?? "");
+    const code = location.searchParams.get("code");
+    expect(code).toBeTruthy();
+
+    const client = await OAuthClient.findByClientId(clientId);
+    expect(client?.teamId).toBeNull();
+    expect(client?.isCIMD).toBe(true);
+
+    const tokenRes = await token({
+      grant_type: "authorization_code",
+      code: code ?? "",
+      redirect_uri: redirectUri,
+      client_id: clientId,
+      code_verifier: codeVerifier,
+    });
+    expect(tokenRes.status).toEqual(200);
+    const tokenBody = await tokenRes.json();
+    expect(tokenBody.access_token).toBeTruthy();
+
+    const refreshRes = await token({
+      grant_type: "refresh_token",
+      refresh_token: tokenBody.refresh_token,
+      client_id: clientId,
+    });
+    expect(refreshRes.status).toEqual(200);
+    const refreshBody = await refreshRes.json();
+    expect(refreshBody.access_token).toBeTruthy();
+
+    const { body } = mcpRequest("initialize", {
+      protocolVersion: "2025-03-26",
+      capabilities: {},
+      clientInfo: { name: "test-client", version: "1.0.0" },
+    });
+    const mcpRes = await server.post("/mcp/", {
+      headers: mcpHeaders(refreshBody.access_token),
+      body,
+    });
+    expect(mcpRes.status).toEqual(200);
+  });
+
+  it("should reject a client secret for a metadata document client", async () => {
+    const subdomain = buildSubdomain();
+    const team = await buildTeam({ subdomain });
+    const user = await buildUser({ teamId: team.id });
+    const clientId = `https://${randomUUID()}.example.com/oauth/client.json`;
+    mockMetadataDocument(clientId);
+
+    const authorizeRes = await authorize(user, subdomain, clientId);
+    const location = new URL(authorizeRes.headers.get("location") ?? "");
+
+    const tokenRes = await token({
+      grant_type: "authorization_code",
+      code: location.searchParams.get("code") ?? "",
+      redirect_uri: redirectUri,
+      client_id: clientId,
+      client_secret: "guess",
+      code_verifier: codeVerifier,
+    });
+    expect(tokenRes.status).toEqual(400);
+    expect((await tokenRes.json()).error_description).toContain(
+      "client is invalid"
+    );
+  });
+
+  it("should return a distinct error when the metadata document cannot be loaded", async () => {
+    const subdomain = buildSubdomain();
+    const team = await buildTeam({ subdomain });
+    const user = await buildUser({ teamId: team.id });
+    const clientId = `https://${randomUUID()}.example.com/oauth/client.json`;
+    msw.use(
+      http.get(clientId, () => new HttpResponse("error", { status: 503 }))
+    );
+
+    const res = await authorize(user, subdomain, clientId);
+    expect(res.status).toEqual(422);
+    expect(res.headers.get("location")).toBeNull();
+    const body = await res.json();
+    expect(body.error).toEqual("invalid_client");
+    expect(body.error_description).toContain("status 503");
+  });
+
+  it("should not authorize a metadata document client when MCP is disabled", async () => {
+    const subdomain = buildSubdomain();
+    const team = await buildTeam({
+      subdomain,
+      preferences: { [TeamPreference.MCP]: false },
+    });
+    const user = await buildUser({ teamId: team.id });
+    const clientId = `https://${randomUUID()}.example.com/oauth/client.json`;
+    mockMetadataDocument(clientId);
+
+    const res = await authorize(user, subdomain, clientId);
+    expect(res.status).toEqual(403);
+    expect(res.headers.get("location")).toBeNull();
+  });
+
+  it("should authorize a loopback redirect URI on another port", async () => {
+    const subdomain = buildSubdomain();
+    const team = await buildTeam({ subdomain });
+    const user = await buildUser({ teamId: team.id });
+    const clientId = `https://${randomUUID()}.example.com/oauth/client.json`;
+    msw.use(
+      http.get(clientId, () =>
+        HttpResponse.json({
+          client_id: clientId,
+          client_name: "Example CLI",
+          redirect_uris: ["http://localhost/callback"],
+        })
+      )
+    );
+
+    const res = await server.post("/oauth/authorize", user, {
+      redirect: "manual",
+      headers: { host: `${subdomain}.outline.dev` },
+      body: {
+        client_id: clientId,
+        response_type: "code",
+        redirect_uri: "http://localhost:54321/callback",
+        state: "state",
+        code_challenge: codeChallenge,
+        code_challenge_method: "S256",
+      },
+    });
+
+    expect(res.status).toEqual(302);
+    expect(res.headers.get("location")).toMatch(
+      /^http:\/\/localhost:54321\/callback\?code=/
+    );
+  });
+
+  it("should not authorize a redirect URI missing from the document", async () => {
+    const subdomain = buildSubdomain();
+    const team = await buildTeam({ subdomain });
+    const user = await buildUser({ teamId: team.id });
+    const clientId = `https://${randomUUID()}.example.com/oauth/client.json`;
+    mockMetadataDocument(clientId);
+
+    const res = await server.post("/oauth/authorize", user, {
+      redirect: "manual",
+      headers: { host: `${subdomain}.outline.dev` },
+      body: {
+        client_id: clientId,
+        response_type: "code",
+        redirect_uri: "https://attacker.example.com/callback",
+        state: "state",
+        code_challenge: codeChallenge,
+        code_challenge_method: "S256",
+      },
+    });
+    expect(res.status).not.toEqual(302);
+  });
+
+  it("should require PKCE with S256", async () => {
+    const subdomain = buildSubdomain();
+    const team = await buildTeam({ subdomain });
+    const user = await buildUser({ teamId: team.id });
+    const clientId = `https://${randomUUID()}.example.com/oauth/client.json`;
+    mockMetadataDocument(clientId);
+
+    const body = {
+      client_id: clientId,
+      response_type: "code",
+      redirect_uri: redirectUri,
+      state: "state",
+    };
+
+    const missing = await server.post("/oauth/authorize", user, {
+      redirect: "manual",
+      headers: { host: `${subdomain}.outline.dev` },
+      body,
+    });
+    expect(missing.status).toEqual(400);
+
+    const plain = await server.post("/oauth/authorize", user, {
+      redirect: "manual",
+      headers: { host: `${subdomain}.outline.dev` },
+      body: {
+        ...body,
+        code_challenge: codeVerifier,
+        code_challenge_method: "plain",
+      },
+    });
+    expect(plain.status).toEqual(400);
+  });
+
+  it("should not fetch the document when MCP is disabled", async () => {
+    const subdomain = buildSubdomain();
+    const team = await buildTeam({
+      subdomain,
+      preferences: { [TeamPreference.MCP]: false },
+    });
+    const user = await buildUser({ teamId: team.id });
+    const clientId = `https://${randomUUID()}.example.com/oauth/client.json`;
+    let requests = 0;
+    msw.use(
+      http.get(clientId, () => {
+        requests++;
+        return new HttpResponse(null, { status: 404 });
+      })
+    );
+
+    const res = await authorize(user, subdomain, clientId);
+    expect(res.status).toEqual(403);
+    expect(requests).toEqual(0);
+  });
+});

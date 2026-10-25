@@ -1,0 +1,28 @@
+:root {
+  /* emerald 色系（与管理控制台一致） */
+  --brand-1: #10b981;
+  --brand-2: #34d399;
+  --brand-deep: #047857;
+  --brand-darker: #065f46;
+  --brand-tint: #d1fae5;
+  --brand-rust: #b8503c;
+  --brand-bg-1: #eafaf3;
+  --brand-bg-2: #d9f3e8;
+
+  --bg-grad-1: #eafaf3;
+  --bg-grad-2: #dcf5ea;
+  --bg-grad-3: #cfeede;
+
+  --card-grad-1: rgba(255, 255, 255, 0.66);
+  --card-grad-2: rgba(255, 255, 255, 0.38);
+  --card-shadow: 0 24px 70px rgba(4, 120, 87, 0.14);
+
+  --text-color: #0f2e24;
+  --text-accent: #065f46;
+  --text-muted: rgba(6, 95, 70, 0.6);
+
+  --font-display: 'Manrope', 'Noto Sans SC', sans-serif;
+  --font-serif: 'Instrument Serif', Georgia, serif;
+  --font-serif-cn: 'Noto Serif SC', 'Songti SC', 'SimSun', serif;
+  --font-mono: 'DM Mono', ui-monospace, monospace;
+}

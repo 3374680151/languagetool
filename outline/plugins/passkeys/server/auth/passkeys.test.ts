@@ -1,0 +1,190 @@
+import { buildApiKey, buildTeam, buildUser } from "@server/test/factories";
+import { getTestServer } from "@server/test/support";
+import type { APIContext } from "@server/types";
+import { PasskeyBrand } from "@shared/utils/passkeys";
+import {
+  getExpectedOrigin,
+  getPasskeyLoginRedirect,
+  isUniqueAuthenticator,
+} from "./passkeys";
+
+const server = getTestServer();
+
+describe("getExpectedOrigin", () => {
+  // Helper to mock APIContext for testing
+  const createMockContext = (options: {
+    protocol: string;
+    hostname: string;
+    host: string;
+    forwardedPort?: string;
+  }): APIContext =>
+    ({
+      protocol: options.protocol,
+      request: {
+        hostname: options.hostname,
+        host: options.host,
+        get: (header: string) => {
+          if (header === "X-Forwarded-Port" && options.forwardedPort) {
+            return options.forwardedPort;
+          }
+          return undefined;
+        },
+      } as unknown,
+    }) as unknown as APIContext;
+
+  it("should construct origin with non-standard HTTPS port from X-Forwarded-Port", () => {
+    const ctx = createMockContext({
+      protocol: "https",
+      hostname: "outline.example.com",
+      host: "outline.example.com", // Without port (from X-Forwarded-Host)
+      forwardedPort: "10081",
+    });
+
+    expect(getExpectedOrigin(ctx)).toBe("https://outline.example.com:10081");
+  });
+
+  it("should construct origin without port for standard HTTPS port (443)", () => {
+    const ctx = createMockContext({
+      protocol: "https",
+      hostname: "outline.example.com",
+      host: "outline.example.com",
+      forwardedPort: "443",
+    });
+
+    expect(getExpectedOrigin(ctx)).toBe("https://outline.example.com");
+  });
+
+  it("should construct origin without port for standard HTTP port (80)", () => {
+    const ctx = createMockContext({
+      protocol: "http",
+      hostname: "outline.example.com",
+      host: "outline.example.com",
+      forwardedPort: "80",
+    });
+
+    expect(getExpectedOrigin(ctx)).toBe("http://outline.example.com");
+  });
+
+  it("should use host with port when X-Forwarded-Port is not present", () => {
+    const ctx = createMockContext({
+      protocol: "https",
+      hostname: "outline.example.com",
+      host: "outline.example.com:8443",
+    });
+
+    expect(getExpectedOrigin(ctx)).toBe("https://outline.example.com:8443");
+  });
+
+  it("should construct origin without port when not in host and no X-Forwarded-Port", () => {
+    const ctx = createMockContext({
+      protocol: "https",
+      hostname: "outline.example.com",
+      host: "outline.example.com",
+    });
+
+    expect(getExpectedOrigin(ctx)).toBe("https://outline.example.com");
+  });
+
+  it("should handle HTTP with non-standard port", () => {
+    const ctx = createMockContext({
+      protocol: "http",
+      hostname: "outline.example.com",
+      host: "outline.example.com",
+      forwardedPort: "8080",
+    });
+
+    expect(getExpectedOrigin(ctx)).toBe("http://outline.example.com:8080");
+  });
+});
+
+describe("getPasskeyLoginRedirect", () => {
+  it("should redirect to the desktop passkey flow when client=desktop", () => {
+    expect(getPasskeyLoginRedirect("desktop")).toBe(
+      "/?method=passkey&client=desktop"
+    );
+  });
+
+  it("should default to the web client when client is missing", () => {
+    expect(getPasskeyLoginRedirect(undefined)).toBe(
+      "/?method=passkey&client=web"
+    );
+  });
+
+  it("should default to the web client when client is invalid", () => {
+    expect(getPasskeyLoginRedirect("bogus")).toBe(
+      "/?method=passkey&client=web"
+    );
+  });
+
+  it("should default to the web client when client is an array", () => {
+    expect(getPasskeyLoginRedirect(["desktop", "web"])).toBe(
+      "/?method=passkey&client=web"
+    );
+  });
+});
+
+describe("isUniqueAuthenticator", () => {
+  it("should be true for a known authenticator", () => {
+    expect(isUniqueAuthenticator(PasskeyBrand.OnePassword)).toBe(true);
+  });
+
+  it("should be false for the Chromium authenticator", () => {
+    expect(isUniqueAuthenticator(PasskeyBrand.ChromiumBrowser)).toBe(false);
+  });
+
+  it("should be false for a missing or zero AAGUID", () => {
+    expect(isUniqueAuthenticator(undefined)).toBe(false);
+    expect(isUniqueAuthenticator("00000000-0000-0000-0000-000000000000")).toBe(
+      false
+    );
+  });
+});
+
+describe("#passkeys.generateRegistrationOptions", () => {
+  it("should return registration options for a session", async () => {
+    const team = await buildTeam({ passkeysEnabled: true });
+    const user = await buildUser({ teamId: team.id });
+    const res = await server.post(
+      "/auth/passkeys.generateRegistrationOptions",
+      user
+    );
+    const body = await res.json();
+
+    expect(res.status).toEqual(200);
+    expect(body.data.challenge).toBeTruthy();
+  });
+
+  it("should not allow an API key", async () => {
+    const team = await buildTeam({ passkeysEnabled: true });
+    const user = await buildUser({ teamId: team.id });
+    const apiKey = await buildApiKey({ userId: user.id });
+    const res = await server.post(
+      "/auth/passkeys.generateRegistrationOptions",
+      {
+        headers: { authorization: `Bearer ${apiKey.value}` },
+      }
+    );
+
+    const body = await res.json();
+
+    expect(res.status).toEqual(403);
+    expect(body.message).toEqual("Invalid authentication type");
+  });
+});
+
+describe("#passkeys.verifyRegistration", () => {
+  it("should not allow an API key", async () => {
+    const team = await buildTeam({ passkeysEnabled: true });
+    const user = await buildUser({ teamId: team.id });
+    const apiKey = await buildApiKey({ userId: user.id });
+    const res = await server.post("/auth/passkeys.verifyRegistration", {
+      headers: { authorization: `Bearer ${apiKey.value}` },
+      body: {},
+    });
+
+    const body = await res.json();
+
+    expect(res.status).toEqual(403);
+    expect(body.message).toEqual("Invalid authentication type");
+  });
+});

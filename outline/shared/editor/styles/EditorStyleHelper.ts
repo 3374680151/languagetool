@@ -1,0 +1,235 @@
+/**
+ * Class names and values used by the editor.
+ */
+export class EditorStyleHelper {
+  // Blocks
+
+  static readonly blockRadius = "6px";
+
+  /** Corner radius of images and videos */
+  static readonly mediaRadius = "2px";
+
+  /** Corner radius of images and videos when selected */
+  static readonly mediaSelectedRadius = "8px";
+
+  // Images
+
+  static readonly imageHandle = "image-handle";
+
+  static readonly imageCaption = "caption";
+
+  static readonly imagePositionAnchor = "image-position-anchor";
+
+  /** Node that is displayed while its file uploads */
+  static readonly uploadPlaceholder = "upload-placeholder";
+
+  /** Node that is displayed for the first time while its file uploads */
+  static readonly uploadEnter = "upload-enter";
+
+  /** Status of an upload for assistive technology, not displayed */
+  static readonly uploadStatus = "upload-status";
+
+  /** Node that is hidden while an upload replaces it */
+  static readonly uploadReplaced = "upload-replaced";
+
+  /** Node that has just finished uploading */
+  static readonly uploadComplete = "upload-complete";
+
+  /** Wrapper of an image, around the image element */
+  static readonly imageWrapper = "image-wrapper";
+
+  /** Wrapper of a video, around the video element */
+  static readonly videoWrapper = "video-wrapper";
+
+  /** Wrapper of a PDF preview, around the embedded document */
+  static readonly pdfWrapper = "pdf-wrapper";
+
+  /** Class added to body when resizing images/media */
+  static readonly resizeDragging = "resize-dragging";
+
+  // Headings
+
+  static readonly headingPositionAnchor = "heading-position-anchor";
+
+  /** Section number prepended to headings in serialized clipboard HTML */
+  static readonly headingPrefix = "heading-prefix";
+
+  // Comments
+
+  static readonly comment = "comment-marker";
+
+  /** Container for the comment indicators shown in the gutter beside a line */
+  static readonly commentGutter = "comment-gutter";
+
+  /** Machine translated text inserted below its source block */
+  static readonly translation = "translation-marker";
+
+  // Multiplayer
+
+  /** Remote collaborator's cursor */
+  static readonly multiplayerCursor = "ProseMirror-yjs-cursor";
+
+  /** Remote collaborator's selection */
+  static readonly multiplayerSelection = "ProseMirror-yjs-selection";
+
+  // Code
+
+  static readonly codeBlock = "code-block";
+
+  static readonly codeWord = "code-word";
+
+  /** Toggle button for collapsible code blocks */
+  static readonly codeBlockToggle = "code-block-toggle";
+
+  /** Line number shown in the gutter at the start of each code block line */
+  static readonly codeBlockLineNumber = "code-block-line-number";
+
+  // Diffs
+
+  static readonly diffInsertion = "diff-insertion";
+
+  static readonly diffDeletion = "diff-deletion";
+
+  static readonly diffNodeInsertion = "diff-node-insertion";
+
+  static readonly diffNodeDeletion = "diff-node-deletion";
+
+  static readonly diffModification = "diff-modification";
+
+  static readonly diffNodeModification = "diff-node-modification";
+
+  static readonly diffCurrentChange = "current-diff";
+
+  // Toggle blocks
+
+  /** Toggle block wrapper */
+  static readonly toggleBlock = "toggle-block";
+
+  /** Toggle block button */
+  static readonly toggleBlockButton = "toggle-block-button";
+
+  /** Toggle block content area */
+  static readonly toggleBlockContent = "toggle-block-content";
+
+  /** Toggle block head (first child) */
+  static readonly toggleBlockHead = "toggle-block-head";
+
+  /** Toggle block folded state */
+  static readonly toggleBlockFolded = "folded";
+
+  // Notices
+
+  /** Notice block wrapper */
+  static readonly notice = "notice-block";
+
+  /** Notice block icon */
+  static readonly noticeIcon = "icon";
+
+  /** Notice block content area */
+  static readonly noticeContent = "content";
+
+  // Suggestions
+
+  /** Trigger character and search term while a suggestion menu is open */
+  static readonly suggestionTrigger = "suggestion-trigger";
+
+  // Checkbox Lists
+
+  /** Checkbox list wrapper */
+  static readonly checklistWrapper = "checklist-wrapper";
+
+  /** Toggle button for showing/hiding completed items */
+  static readonly checklistCompletedToggle = "checklist-completed-toggle";
+
+  /** State when completed items are hidden */
+  static readonly checklistCompletedHidden = "completed-hidden";
+
+  // Tables
+
+  /** Table wrapper */
+  static readonly table = "table-wrapper";
+
+  /** Table grip (circle in top left) */
+  static readonly tableGrip = "table-grip";
+
+  /** Table row grip */
+  static readonly tableGripRow = "table-grip-row";
+
+  /** Table column grip */
+  static readonly tableGripColumn = "table-grip-column";
+
+  /** "Plus" to add column on tables */
+  static readonly tableAddColumn = "table-add-column";
+
+  /** "Plus" to add row on tables */
+  static readonly tableAddRow = "table-add-row";
+
+  /** Scrollable area of table */
+  static readonly tableScrollable = "table-scrollable";
+
+  /** Full-width table layout */
+  static readonly tableFullWidth = "table-full-width";
+
+  /** Shadow on the right side of the table */
+  static readonly tableShadowRight = "table-shadow-right";
+
+  /** Shadow on the left side of the table */
+  static readonly tableShadowLeft = "table-shadow-left";
+
+  /** Sticky header state */
+  static readonly tableStickyHeader = "table-sticky-header";
+
+  /** Sticky first column state */
+  static readonly tableStickyColumn = "table-sticky-column";
+
+  /** Drop indicator for table drag and drop */
+  static readonly tableDragDropIndicator = "table-drag-drop-indicator";
+
+  /** Class added to body when dragging table rows/columns */
+  static readonly tableDragging = "table-dragging";
+
+  /** Drag indicator on left side of cell */
+  static readonly tableDragIndicatorLeft = "table-drag-indicator-left";
+
+  /** Drag indicator on right side of cell */
+  static readonly tableDragIndicatorRight = "table-drag-indicator-right";
+
+  /** Drag indicator on top side of cell */
+  static readonly tableDragIndicatorTop = "table-drag-indicator-top";
+
+  /** Drag indicator on bottom side of cell */
+  static readonly tableDragIndicatorBottom = "table-drag-indicator-bottom";
+
+  // Drag and drop
+
+  /** Line that shows where dragged content will be dropped */
+  static readonly dropCursor = "drop-cursor";
+
+  /** Floating handle shown beside the hovered block to drag it */
+  static readonly blockDragHandle = "block-drag-handle";
+
+  /** Block that the drag handle is currently attached to */
+  static readonly dragHandleTarget = "drag-handle-target";
+
+  /** Block that is being dragged */
+  static readonly draggingSource = "dragging-source";
+
+  // Diagrams
+
+  /** Container for a rendered Mermaid diagram */
+  static readonly mermaidDiagram = "mermaid-diagram-wrapper";
+
+  // Global
+
+  /** Minimum padding around editor */
+  static readonly padding = 32;
+
+  /** Table of contents width */
+  static readonly tocWidth = 220;
+
+  /** Width of the document content area */
+  static readonly documentWidth = "54.7em";
+
+  /** Gutter width for the document (for decorations, etc) */
+  static readonly documentGutter = "88px";
+}

@@ -1,0 +1,204 @@
+import { filter, isEqual, orderBy, uniq } from "es-toolkit/compat";
+import { observer } from "mobx-react";
+import styled from "styled-components";
+import { useState, useMemo, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
+import { MOBILE_TOUCH_TARGET } from "@shared/constants";
+import type Document from "~/models/Document";
+import type User from "~/models/User";
+import type { AvatarProps } from "~/components/Avatar";
+import { AvatarSize, AvatarWithPresence } from "~/components/Avatar";
+import DocumentViews from "~/components/DocumentViews";
+import Facepile from "~/components/Facepile";
+import NudeButton from "~/components/NudeButton";
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from "~/components/primitives/Popover";
+import useCurrentUser from "~/hooks/useCurrentUser";
+import useMobile from "~/hooks/useMobile";
+import useStores from "~/hooks/useStores";
+
+/** Space after the avatars on mobile, matching the inset of a 24px icon in a touch target. */
+const MobileIconInset = (MOBILE_TOUCH_TARGET - 24) / 2;
+
+type Props = {
+  /** The document to display live collaborators for */
+  document: Document;
+  /** The maximum number of collaborators to display, defaults to 6 */
+  limit?: number;
+};
+
+/**
+ * Displays a list of live collaborators for a document, including their avatars
+ * and presence status.
+ */
+function Collaborators(props: Props) {
+  const { limit = 6 } = props;
+  const { t } = useTranslation();
+  const isMobile = useMobile();
+  const size = isMobile ? AvatarSize.XLarge : AvatarSize.Large;
+  const user = useCurrentUser();
+  const currentUserId = user?.id;
+  const [requestedUserIds, setRequestedUserIds] = useState<string[]>([]);
+  const { users, presence, ui } = useStores();
+  const { document } = props;
+  const { observingUserId } = ui;
+  const documentPresence = presence.get(document.id);
+  const documentPresenceArray = useMemo(
+    () => (documentPresence ? Array.from(documentPresence.values()) : []),
+    [documentPresence]
+  );
+
+  // Use Set for O(1) lookups and stable references. The current user is
+  // always included to avoid a flash while the multiplayer connection forms.
+  const presentIds = useMemo(() => {
+    const ids = new Set(documentPresenceArray.map((p) => p.userId));
+    if (currentUserId) {
+      ids.add(currentUserId);
+    }
+    return ids;
+  }, [documentPresenceArray, currentUserId]);
+  const editingIds = useMemo(
+    () =>
+      new Set(
+        documentPresenceArray.filter((p) => p.isEditing).map((p) => p.userId)
+      ),
+    [documentPresenceArray]
+  );
+
+  // ensure currently present via websocket are always ordered first
+  // Memoize collaboratorIds as a Set for efficient lookup
+  const collaboratorIdsSet = useMemo(
+    () => new Set(document.collaboratorIds ?? []),
+    [document.collaboratorIds]
+  );
+  const collaborators = useMemo(
+    () =>
+      orderBy(
+        filter(
+          users.all,
+          (u) =>
+            (presentIds.has(u.id) || collaboratorIdsSet.has(u.id)) &&
+            !u.isSuspended
+        ),
+        [(u) => presentIds.has(u.id), "id"],
+        ["asc", "asc"]
+      ),
+    [collaboratorIdsSet, users.all, presentIds]
+  );
+
+  // load any users we don't yet have in memory
+  // Memoize ids to avoid unnecessary effect executions
+  const missingUserIds = useMemo(
+    () =>
+      uniq([...collaboratorIdsSet, ...presentIds])
+        .filter((userId) => !users.get(userId))
+        .sort(),
+    [collaboratorIdsSet, presentIds, users]
+  );
+
+  useEffect(() => {
+    if (
+      !isEqual(requestedUserIds, missingUserIds) &&
+      missingUserIds.length > 0
+    ) {
+      setRequestedUserIds(missingUserIds);
+      void users.fetchPage({ ids: missingUserIds, limit: 100 });
+    }
+  }, [missingUserIds, requestedUserIds, users]);
+
+  // Memoize onClick handler to avoid inline function creation
+  const handleAvatarClick = useCallback(
+    (
+      collaboratorId: string,
+      isPresent: boolean,
+      isObserving: boolean,
+      isObservable: boolean
+    ) =>
+      (ev: React.MouseEvent) => {
+        if (isObservable && isPresent) {
+          ev.preventDefault();
+          ev.stopPropagation();
+          ui.setObservingUser(isObserving ? undefined : collaboratorId);
+        }
+      },
+    [ui]
+  );
+
+  const renderAvatar = useCallback(
+    ({ model: collaborator, ...rest }: AvatarProps & { model: User }) => {
+      const isPresent = presentIds.has(collaborator.id);
+      const isEditing = editingIds.has(collaborator.id);
+      const isObserving = observingUserId === collaborator.id;
+      const isObservable = collaborator.id !== currentUserId;
+
+      return (
+        <AvatarWithPresence
+          key={collaborator.id}
+          {...rest}
+          user={collaborator}
+          isPresent={isPresent}
+          isEditing={isEditing}
+          isObserving={isObserving}
+          isCurrentUser={currentUserId === collaborator.id}
+          alt={t("Avatar of {{ name }}", { name: collaborator.name })}
+          onClick={
+            isObservable
+              ? handleAvatarClick(
+                  collaborator.id,
+                  isPresent,
+                  isObserving,
+                  isObservable
+                )
+              : undefined
+          }
+        />
+      );
+    },
+    [
+      presentIds,
+      editingIds,
+      observingUserId,
+      currentUserId,
+      handleAvatarClick,
+      t,
+    ]
+  );
+
+  if (!document.insightsEnabled) {
+    return null;
+  }
+
+  const facepileWidth = Math.min(collaborators.length, limit) * size;
+
+  return (
+    <Popover>
+      <PopoverTrigger>
+        <FacepileButton
+          width={isMobile ? facepileWidth + MobileIconInset : facepileWidth}
+          height={isMobile ? MOBILE_TOUCH_TARGET : size}
+        >
+          <Facepile
+            size={size}
+            limit={limit}
+            overflow={Math.max(0, collaborators.length - limit)}
+            users={collaborators}
+            renderAvatar={renderAvatar}
+          />
+        </FacepileButton>
+      </PopoverTrigger>
+      <PopoverContent aria-label={t("Viewers")} side="bottom" align="end">
+        <DocumentViews document={document} />
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+const FacepileButton = styled(NudeButton)`
+  display: inline-flex;
+  align-items: center;
+`;
+
+export default observer(Collaborators);

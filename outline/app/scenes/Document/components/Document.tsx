@@ -1,0 +1,760 @@
+import type { Location } from "history";
+import { observer } from "mobx-react";
+import { AllSelection } from "prosemirror-state";
+import { useRef, useCallback } from "react";
+import * as React from "react";
+import { useTranslation } from "react-i18next";
+import { Prompt, matchPath, useHistory, useLocation } from "react-router-dom";
+import { toast } from "sonner";
+import styled from "styled-components";
+import { breakpoint } from "@shared/styles/breakpoint";
+import { EditorStyleHelper } from "@shared/editor/styles/EditorStyleHelper";
+import { s } from "@shared/styles";
+import type { NavigationNode } from "@shared/types";
+import { IconType, TOCPosition, TeamPreference } from "@shared/types";
+import { determineIconType } from "@shared/utils/icon";
+import parseDocumentSlug from "@shared/utils/parseDocumentSlug";
+import type Document from "~/models/Document";
+import type Revision from "~/models/Revision";
+import { useDocumentContext } from "~/components/DocumentContext";
+import DocumentMove from "~/components/DocumentExplorer/DocumentMove";
+import DocumentPublish from "~/scenes/DocumentPublish";
+import ErrorBoundary from "~/components/ErrorBoundary";
+import LoadingIndicator from "~/components/LoadingIndicator";
+import PageTitle from "~/components/PageTitle";
+import PlaceholderDocument from "~/components/PlaceholderDocument";
+import RegisterKeyDown from "~/components/RegisterKeyDown";
+import type { Editor as TEditor } from "~/editor";
+import type { Properties } from "~/types";
+import useEventListener from "~/hooks/useEventListener";
+import { useLocationSidebarContext } from "~/hooks/useLocationSidebarContext";
+import useMobile from "~/hooks/useMobile";
+import { HEADER_HEIGHT } from "~/components/Header";
+import AssistantPanel from "./AssistantPanel";
+import useStores from "~/hooks/useStores";
+import isTextInput from "~/utils/isTextInput";
+import Logger from "~/utils/Logger";
+import { client } from "~/utils/ApiClient";
+import { emojiToUrl } from "~/utils/emoji";
+import {
+  documentHistoryPath,
+  documentEditPath,
+  matchDocumentHistory,
+} from "~/utils/routeHelpers";
+import { useDocumentSave } from "../hooks/useDocumentSave";
+import Container from "./Container";
+import Contents from "./Contents";
+import Editor from "./Editor";
+import Header from "./Header";
+import Notices, { DocumentNotice } from "./Notices";
+import References from "./References";
+import RevisionViewer from "./RevisionViewer";
+import SharedHeader from "./SharedHeader";
+
+type LocationState = {
+  title?: string;
+  restore?: boolean;
+  revisionId?: string;
+};
+
+interface Props {
+  /** Tree of navigation nodes for shared documents. */
+  sharedTree?: NavigationNode;
+  /** Map of ability names to booleans representing current user permissions. */
+  abilities: Record<string, boolean>;
+  /** The document model being viewed or edited. */
+  document: Document;
+  /** An optional revision to display instead of the live document. */
+  revision?: Revision;
+  /** Whether the document is in read-only mode. */
+  readOnly: boolean;
+  /** The share ID when viewing a publicly shared document. */
+  shareId?: string;
+  /** Override for the table of contents position, or false to hide it. */
+  tocPosition?: TOCPosition | false;
+  /** Callback to create a linked document from the editor. */
+  onCreateLink?: (
+    params: Properties<Document>,
+    nested?: boolean
+  ) => Promise<string>;
+  /** Optional children rendered after the main document content. */
+  children?: React.ReactNode;
+}
+
+/** Scene component responsible for rendering and interacting with a document. */
+function DocumentScene({
+  document,
+  revision,
+  readOnly,
+  abilities,
+  shareId,
+  tocPosition,
+  onCreateLink,
+  children,
+}: Props) {
+  const { auth, ui, dialogs } = useStores();
+  const documentContext = useDocumentContext();
+  const isMobile = useMobile();
+  const { t } = useTranslation();
+  const history = useHistory();
+  const location = useLocation<LocationState>();
+  const sidebarContext = useLocationSidebarContext();
+  const { team, user } = auth;
+
+  const editorRef = useRef<TEditor>(null);
+
+  const {
+    isUploading,
+    isSaving,
+    isPublishing,
+    isEditorDirty,
+    isEmpty,
+    onSave,
+    replaceSelection,
+    handleSelectTemplate,
+    handleChangeTitle,
+    handleChangeIcon,
+    onFileUploadStart,
+    onFileUploadStop,
+  } = useDocumentSave({ document, editorRef, readOnly });
+
+  const onSynced = useCallback(async () => {
+    const restore = location.state?.restore;
+    const revisionId = location.state?.revisionId;
+    const editor = editorRef.current;
+
+    if (!editor) {
+      return;
+    }
+
+    // Highlight search term when navigating from search results
+    const params = new URLSearchParams(location.search);
+    const searchTerm = params.get("q");
+    if (searchTerm) {
+      editor.commands.find({ text: searchTerm });
+    }
+
+    if (!restore) {
+      return;
+    }
+
+    history.replace(document.url, {
+      ...location.state,
+      restore: undefined,
+      revisionId: undefined,
+    });
+
+    if (!revisionId) {
+      return;
+    }
+
+    const response = await client.post("/revisions.info", {
+      id: revisionId,
+    });
+
+    if (response) {
+      await replaceSelection(
+        response.data,
+        new AllSelection(editor.view.state.doc)
+      );
+      toast.success(t("Document restored"));
+    }
+  }, [location, replaceSelection, t, history, document.url]);
+
+  const onUndoRedo = useCallback(
+    (event: KeyboardEvent) => {
+      const target = event.target instanceof Element ? event.target : undefined;
+
+      // The editor handles undo/redo through its own keymap when focused
+      if (
+        editorRef.current?.view?.hasFocus() ||
+        (target && (isTextInput(target) || !!target.closest(".ProseMirror")))
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+
+      if (readOnly) {
+        return;
+      }
+
+      if (event.shiftKey) {
+        editorRef.current?.commands.redo?.();
+      } else {
+        editorRef.current?.commands.undo?.();
+      }
+    },
+    [readOnly]
+  );
+
+  const onMove = useCallback(
+    (ev: React.MouseEvent | KeyboardEvent) => {
+      ev.preventDefault();
+      if (abilities.move) {
+        dialogs.openModal({
+          title: t("Move document"),
+          content: <DocumentMove document={document} />,
+        });
+      }
+    },
+    [document, dialogs, t, abilities.move]
+  );
+
+  const goToEdit = useCallback(
+    (ev: KeyboardEvent) => {
+      if (readOnly) {
+        ev.preventDefault();
+        if (abilities.update) {
+          history.push({
+            pathname: documentEditPath(document),
+            state: { sidebarContext },
+          });
+        }
+      } else if (editorRef.current?.isBlurred) {
+        ev.preventDefault();
+        editorRef.current?.focus();
+      }
+    },
+    [readOnly, abilities.update, history, document, sidebarContext]
+  );
+
+  // Files dropped in the margins around the document are inserted at the
+  // closest point in the editor, rather than being ignored by the browser.
+  const isFileDrag = useCallback(
+    (event: React.DragEvent<HTMLElement>) =>
+      !readOnly && !revision && event.dataTransfer.types.includes("Files"),
+    [readOnly, revision]
+  );
+
+  const handleDragOver = useCallback(
+    (event: React.DragEvent<HTMLElement>) => {
+      if (isFileDrag(event)) {
+        event.dataTransfer.dropEffect = "copy";
+        event.preventDefault();
+      }
+    },
+    [isFileDrag]
+  );
+
+  const handleDrop = useCallback(
+    (event: React.DragEvent<HTMLElement>) => {
+      // A drop that landed inside the editor has already been handled.
+      if (event.defaultPrevented || !isFileDrag(event)) {
+        return;
+      }
+      // Prevent the browser from navigating to the file if it cannot be added.
+      event.preventDefault();
+      void editorRef.current?.insertDroppedContent(event);
+    },
+    [isFileDrag]
+  );
+
+  const goToHistory = useCallback(
+    (ev: KeyboardEvent) => {
+      if (!readOnly) {
+        return;
+      }
+      if (ev.ctrlKey) {
+        return;
+      }
+      ev.preventDefault();
+
+      if (location.pathname.endsWith("history")) {
+        history.push({
+          pathname: document.path,
+          state: { sidebarContext },
+        });
+      } else {
+        history.push({
+          pathname: documentHistoryPath(document),
+          state: { sidebarContext },
+        });
+      }
+    },
+    [readOnly, location.pathname, history, document, sidebarContext]
+  );
+
+  const onPublish = useCallback(
+    (ev: React.MouseEvent | KeyboardEvent) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+
+      if (document.publishedAt) {
+        return;
+      }
+
+      if (document?.collectionId) {
+        void onSave({
+          publish: true,
+          done: true,
+        });
+      } else {
+        dialogs.openModal({
+          title: t("Publish document"),
+          content: <DocumentPublish document={document} />,
+        });
+      }
+    },
+    [document, dialogs, t, onSave]
+  );
+
+  const goBack = useCallback(() => {
+    if (!readOnly) {
+      history.push({
+        pathname: document.url,
+        state: { sidebarContext },
+      });
+    }
+  }, [readOnly, history, document, sidebarContext]);
+
+  // Render
+  const isShare = !!shareId;
+  const embedsDisabled =
+    (team && team.documentEmbeds === false) || document.embedsDisabled;
+
+  const tocPos =
+    tocPosition ??
+    ((team?.getPreference(TeamPreference.TocPosition) as TOCPosition) ||
+      TOCPosition.Left);
+  // Hide on mobile at render time so the stored preference is kept intact.
+  const showContents =
+    tocPos &&
+    !isMobile &&
+    (isShare ? ui.tocVisible !== false : ui.tocVisible === true);
+  // The assistant pane hosts the translation and grammar panels. It is a
+  // writing aid, unavailable on shared or mobile views.
+  const showTranslation =
+    !isShare &&
+    !isMobile &&
+    !revision &&
+    (ui.translationPanelVisible || ui.grammarPanelVisible);
+  const tocOffset =
+    tocPos === TOCPosition.Left
+      ? EditorStyleHelper.tocWidth / -2
+      : EditorStyleHelper.tocWidth / 2;
+
+  const multiplayerEditor =
+    !document.isArchived && !document.isDeleted && !revision && !isShare;
+
+  const hasUnsyncedChanges = !readOnly && documentContext.hasUnsyncedChanges;
+
+  const warnUnsyncedChanges = () => {
+    Logger.warn("Leaving document with unsynced changes", {
+      documentId: document.id,
+      hasLocalPersistence: documentContext.hasLocalPersistence,
+    });
+  };
+
+  const handleBlockNavigation = (nextLocation: Location) => {
+    // Moving between views of this document, such as edit mode or a heading
+    // anchor, keeps the editor mounted, but a revision view replaces it.
+    const isLeaving =
+      !parseDocumentSlug(nextLocation.pathname)?.endsWith(document.urlId) ||
+      !!matchPath<{ revisionId?: string }>(
+        nextLocation.pathname,
+        matchDocumentHistory
+      )?.params.revisionId;
+    if (!isLeaving) {
+      return true;
+    }
+    if (isUploading && !isEditorDirty) {
+      return t(
+        `Images are still uploading.\nAre you sure you want to discard them?`
+      );
+    }
+    if (hasUnsyncedChanges) {
+      warnUnsyncedChanges();
+    }
+    return true;
+  };
+
+  const handleUnload = () => {
+    if (hasUnsyncedChanges) {
+      warnUnsyncedChanges();
+    }
+  };
+
+  useEventListener("beforeunload", handleUnload);
+
+  const hasEmojiInTitle = determineIconType(document.icon) === IconType.Emoji;
+  const pageTitle = hasEmojiInTitle
+    ? document.displayTitle.replace(document.icon!, "")
+    : document.displayTitle;
+  const favicon = hasEmojiInTitle ? emojiToUrl(document.icon!) : undefined;
+
+  const fullWidthTransformOffsetStyle = {
+    ["--full-width-transform-offset"]: `${document.fullWidth && showContents ? tocOffset : 0}px`,
+  } as React.CSSProperties;
+
+  return (
+    <ErrorBoundary showTitle>
+      <RegisterKeyDown trigger="m" handler={onMove} />
+      <RegisterKeyDown trigger="z" metaKey handler={onUndoRedo} />
+      <RegisterKeyDown trigger="e" handler={goToEdit} />
+      <RegisterKeyDown trigger="Escape" handler={goBack} />
+      <RegisterKeyDown trigger="h" handler={goToHistory} />
+      <RegisterKeyDown
+        trigger="p"
+        metaKey
+        shiftKey
+        options={{
+          allowInInput: true,
+        }}
+        handler={onPublish}
+      />
+      <Background column auto onDragOver={handleDragOver} onDrop={handleDrop}>
+        <PageTitle title={pageTitle} favicon={favicon} />
+        {(isUploading || isSaving) && <LoadingIndicator />}
+        <Container column auto>
+          {!readOnly && (
+            <Prompt
+              when={(isUploading && !isEditorDirty) || hasUnsyncedChanges}
+              message={handleBlockNavigation}
+            />
+          )}
+          {isShare ? (
+            <SharedHeader document={document} />
+          ) : (
+            <Header
+              document={document}
+              revision={revision}
+              isDraft={document.isDraft}
+              isEditing={!readOnly && !!user?.separateEditMode}
+              isSaving={isSaving}
+              isPublishing={isPublishing}
+              publishingIsDisabled={
+                document.isSaving || isPublishing || isEmpty
+              }
+              savingIsDisabled={document.isSaving || isEmpty}
+              onSelectTemplate={handleSelectTemplate}
+              onSave={onSave}
+            />
+          )}
+          <Main
+            fullWidth={document.fullWidth}
+            tocPosition={tocPos}
+            translation={showTranslation}
+            style={fullWidthTransformOffsetStyle}
+          >
+            <EditorRegion
+              fullWidth={document.fullWidth}
+              tocPosition={tocPos}
+              translation={showTranslation}
+            >
+              <React.Suspense
+                fallback={
+                  <EditorContainer
+                    docFullWidth={document.fullWidth}
+                    showContents={showContents}
+                    tocPosition={tocPos}
+                    translation={showTranslation}
+                  >
+                    <PlaceholderDocument />
+                  </EditorContainer>
+                }
+              >
+                <EditorContainer
+                  docFullWidth={document.fullWidth}
+                  showContents={showContents}
+                  tocPosition={tocPos}
+                  translation={showTranslation}
+                >
+                  {revision ? (
+                    <RevisionViewer
+                      ref={editorRef}
+                      document={document}
+                      revision={revision}
+                      id={revision.id}
+                    />
+                  ) : (
+                    <>
+                      <Notices document={document} readOnly={readOnly} />
+
+                      {showContents && (
+                        <PrintContentsContainer>
+                          <Contents />
+                        </PrintContentsContainer>
+                      )}
+                      <Editor
+                        id={document.id}
+                        key={embedsDisabled ? "disabled" : "enabled"}
+                        ref={editorRef}
+                        multiplayer={multiplayerEditor}
+                        isDraft={document.isDraft}
+                        document={document}
+                        value={readOnly ? document.data : undefined}
+                        defaultValue={document.data}
+                        embedsDisabled={embedsDisabled}
+                        onSynced={onSynced}
+                        onFileUploadStart={onFileUploadStart}
+                        onFileUploadStop={onFileUploadStop}
+                        onCreateLink={onCreateLink}
+                        onChangeTitle={handleChangeTitle}
+                        onChangeIcon={handleChangeIcon}
+                        onSave={onSave}
+                        onPublish={onPublish}
+                        onCancel={goBack}
+                        readOnly={readOnly}
+                        canUpdate={abilities.update}
+                        canComment={abilities.comment}
+                        autoFocus={document.isJustCreated}
+                      >
+                        <ReferencesWrapper>
+                          <References document={document} />
+                        </ReferencesWrapper>
+                      </Editor>
+                    </>
+                  )}
+                </EditorContainer>
+                {showContents && (
+                  <ContentsContainer
+                    docFullWidth={document.fullWidth}
+                    position={tocPos}
+                    translation={showTranslation}
+                  >
+                    <Contents />
+                  </ContentsContainer>
+                )}
+                {showTranslation && (
+                  <TranslationContainer
+                    style={{
+                      width: `${(ui.translationPaneRatio ?? 0.42) * 100}%`,
+                    }}
+                  >
+                    <AssistantPanel />
+                  </TranslationContainer>
+                )}
+              </React.Suspense>
+            </EditorRegion>
+          </Main>
+          {children}
+        </Container>
+      </Background>
+    </ErrorBoundary>
+  );
+}
+
+type MainProps = {
+  fullWidth: boolean;
+  tocPosition: TOCPosition | false;
+  translation: boolean;
+};
+
+const Main = styled.div<MainProps>`
+  margin-top: 4px;
+
+  ${breakpoint("tablet")`
+    display: ${({ translation }: MainProps) => (translation ? "flex" : "grid")};
+    align-items: ${({ translation }: MainProps) =>
+      translation ? "flex-start" : undefined};
+    overflow: ${({ translation }: MainProps) =>
+      translation ? "hidden" : undefined};
+
+    grid-template-columns: ${({
+      fullWidth,
+      tocPosition,
+      translation,
+    }: MainProps) =>
+      translation
+        ? undefined
+        : fullWidth
+          ? tocPosition === TOCPosition.Left
+            ? `${EditorStyleHelper.tocWidth}px minmax(0, 1fr)`
+            : `minmax(0, 1fr) ${EditorStyleHelper.tocWidth}px`
+          : `1fr minmax(0, ${`calc(46em + ${EditorStyleHelper.documentGutter})`}) 1fr`};
+  `};
+
+  ${breakpoint("desktopLarge")`
+    grid-template-columns: ${({
+      fullWidth,
+      tocPosition,
+      translation,
+    }: MainProps) =>
+      translation
+        ? undefined
+        : fullWidth
+          ? tocPosition === TOCPosition.Left
+            ? `${EditorStyleHelper.tocWidth}px minmax(0, 1fr)`
+            : `minmax(0, 1fr) ${EditorStyleHelper.tocWidth}px`
+          : `1fr minmax(0, ${`calc(${EditorStyleHelper.documentWidth} + ${EditorStyleHelper.documentGutter})`}) 1fr`};
+  `};
+
+  @media print {
+    display: block;
+    max-width: ${({ fullWidth }: MainProps) =>
+      fullWidth
+        ? `100%`
+        : `calc(${EditorStyleHelper.documentWidth} + ${EditorStyleHelper.documentGutter})`};
+  }
+`;
+
+type ContentsContainerProps = {
+  docFullWidth: boolean;
+  position: TOCPosition | false;
+  translation: boolean;
+};
+
+const ContentsContainer = styled.div<ContentsContainerProps>`
+  ${breakpoint("tablet")`
+    margin-top: calc(44px + 6vh);
+
+    grid-row: 1;
+    grid-column: ${({ docFullWidth, position }: ContentsContainerProps) =>
+      position === TOCPosition.Left ? 1 : docFullWidth ? 2 : 3};
+    justify-self: ${({ position }: ContentsContainerProps) =>
+      position === TOCPosition.Left ? "end" : "start"};
+
+    // Inside the split view the table of contents becomes a narrow flex
+    // column beside the editor.
+    ${({ translation, position }: ContentsContainerProps) =>
+      translation
+        ? `flex: none;
+    width: ${EditorStyleHelper.tocWidth}px;
+    align-self: stretch;
+    order: ${position === TOCPosition.Left ? "-1" : "1"};`
+        : ""}
+  `};
+
+  @media print {
+    display: none;
+  }
+`;
+
+type EditorRegionProps = {
+  fullWidth: boolean;
+  tocPosition: TOCPosition | false;
+  translation: boolean;
+};
+
+/**
+ * Wraps the editor (and table of contents) columns. Transparent in layout
+ * while the translation pane is closed; when it is open the region becomes
+ * the split view's left pane, centering the document inside the space left
+ * of the translation pane.
+ */
+const EditorRegion = styled.div<EditorRegionProps>`
+  ${breakpoint("tablet")`
+    ${({ translation }: EditorRegionProps) =>
+      translation
+        ? `flex: 1;
+    min-width: 0;
+    position: sticky;
+    top: ${HEADER_HEIGHT}px;
+    height: calc(100vh - ${HEADER_HEIGHT}px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    align-items: flex-start;`
+        : "display: contents"};
+  `};
+
+  @media print {
+    display: contents;
+  }
+`;
+
+const TranslationContainer = styled.div`
+  ${breakpoint("tablet")`
+    align-self: stretch;
+    height: auto;
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    background: ${s("backgroundSecondary")};
+    border-left: 1px solid ${s("inputBorder")};
+    padding: 12px 0 12px 16px;
+  `};
+
+  @media print {
+    display: none;
+  }
+`;
+
+const PrintContentsContainer = styled.div`
+  display: none;
+  margin: 0 -12px;
+
+  @media print {
+    display: block;
+  }
+`;
+
+type EditorContainerProps = {
+  docFullWidth: boolean;
+  showContents: boolean;
+  tocPosition: TOCPosition | false;
+  translation: boolean;
+};
+
+const EditorContainer = styled.div<EditorContainerProps>`
+  // Adds space to the gutter to make room for icon & heading annotations
+  padding: 0 32px;
+
+  // A notice above the editor already provides the space from the header
+  &:has(> ${DocumentNotice}) {
+    --document-title-margin-top: 0px;
+  }
+
+  ${breakpoint("tablet")`
+    padding: 0 44px;
+    grid-row: 1;
+
+    // Decides the editor column position & span
+    grid-column: ${({
+      docFullWidth,
+      showContents,
+      tocPosition,
+    }: EditorContainerProps) =>
+      docFullWidth
+        ? showContents
+          ? tocPosition === TOCPosition.Left
+            ? 2
+            : 1
+          : "1 / -1"
+        : 2};
+
+    // Inside the split view the editor keeps the regular layout's column
+    // width, shrinking only when the space left of the translation pane is
+    // narrower, and centers itself in any remaining space.
+    ${({ translation, docFullWidth }: EditorContainerProps) =>
+      translation
+        ? docFullWidth
+          ? "flex: 1 1 auto;"
+          : `flex: 0 1 calc(46em + ${EditorStyleHelper.documentGutter});
+    max-width: calc(46em + ${EditorStyleHelper.documentGutter});
+    margin: 0 auto;`
+        : ""}
+  `};
+
+  ${breakpoint("desktopLarge")`
+    ${({ translation, docFullWidth }: EditorContainerProps) =>
+      translation && !docFullWidth
+        ? `flex-basis: calc(${EditorStyleHelper.documentWidth} + ${EditorStyleHelper.documentGutter});
+    max-width: calc(${EditorStyleHelper.documentWidth} + ${EditorStyleHelper.documentGutter});`
+        : ""}
+  `};
+`;
+
+const Background = styled(Container)`
+  position: relative;
+  background: ${s("background")};
+
+  // A container unit, unlike a measured value, does not restyle the document on resize.
+  container-type: inline-size;
+  --container-width: 100cqi;
+`;
+
+const ReferencesWrapper = styled.div`
+  margin: 12px 0 60px;
+
+  ${breakpoint("tablet")`
+    margin-bottom: 12px;
+  `}
+
+  @media print {
+    display: none;
+  }
+`;
+
+export default observer(DocumentScene);
