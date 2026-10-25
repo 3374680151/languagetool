@@ -1,9 +1,2 @@
-# 本仓库包含自有项目 outline/ 与 aiinifite-front/ 的完整源码。
-# 以下第三方项目体积过大（>250MB），不入库，按需重新克隆：
-#   git clone https://github.com/FluentRead/FluentRead.git FluentRead
-#   git clone https://github.com/languagetool-org/languagetool.git languagetool
-/FluentRead/
-/languagetool/
-
 .DS_Store
 node_modules/
