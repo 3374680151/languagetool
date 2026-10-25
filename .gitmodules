@@ -1,0 +1,12 @@
+[submodule "outline"]
+	path = outline
+	url = https://github.com/3374680151/outline.git
+[submodule "aiinifite-front"]
+	path = aiinifite-front
+	url = https://github.com/3374680151/aiinifite-front.git
+[submodule "FluentRead"]
+	path = FluentRead
+	url = https://github.com/FluentRead/FluentRead.git
+[submodule "languagetool"]
+	path = languagetool
+	url = https://github.com/languagetool-org/languagetool.git
