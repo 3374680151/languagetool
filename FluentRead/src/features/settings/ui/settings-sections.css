@@ -1,0 +1,491 @@
+/**
+ * @file src/features/settings/ui/settings-sections.css
+ * 文件职责：定义 SettingsSections 各业务分区的专属样式，覆盖通用设置、网站规则、视频、连接配置和能力禁用提示。
+ * 主要内容：包含通用页默认服务与配置按钮的自适应排列、设置行、服务窗口加载反馈、endpoint 提示、深色主题与响应式调整；译文样式预览已移至界面风格页，并直接复用网页的 translation-display.css。
+ * 模块边界：该样式表只描述设置分区的视觉，不应改变配置行为或宿主网页；Options 页面骨架由 settings-page.css 管理，图片 OCR 等独立组件保留自己的 scoped CSS。
+ */
+
+/* 服务入口反馈复用当前主题；文字自然换行，不启动加载动画或主动移动焦点。 */
+.custom-provider-load-feedback { display: flex; align-items: flex-start; gap: 8px; margin: 0 0 10px; padding: 9px 10px; border: 1px solid var(--line); border-radius: 9px; color: var(--muted); background: var(--surface-soft); font-size: 12px; line-height: 1.6; }
+.custom-provider-load-feedback p { flex: 1; min-width: 0; margin: 0; overflow-wrap: anywhere; }
+.custom-provider-load-feedback button { flex: none; padding: 0 2px; border: 0; color: var(--brand-strong); background: transparent; font: inherit; cursor: pointer; }
+.custom-provider-load-feedback button:hover { text-decoration: underline; }
+.custom-provider-load-feedback button:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: 2px; }
+
+.settings-section {
+  min-width: 0;
+}
+
+.general-settings-section .general-service-control {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.general-settings-section .general-service-control :deep(.el-select) {
+  flex: 1 1 180px;
+  width: auto;
+}
+
+.general-settings-section .general-service-configure {
+  flex: 0 0 auto;
+  max-width: 100%;
+  min-height: 32px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--brand-strong);
+  background: var(--surface);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.general-settings-section .general-service-configure:hover {
+  border-color: var(--brand);
+  background: var(--surface-soft);
+}
+
+.general-settings-section .general-service-configure:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.site-settings-section {
+  padding: 0 0 12px;
+}
+
+.service-default-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 360px;
+  min-width: 0;
+}
+
+.service-default-control :deep(.service-brand-icon) {
+  flex: none;
+  box-shadow: none;
+}
+
+.service-default-control :deep(.el-select) {
+  width: 100%;
+  min-width: 0;
+}
+
+.fluentread-service-option { display: flex; align-items: center; gap: 10px; min-width: 0; width: 100%; }
+.fluentread-service-option > span:last-child { min-width: 0; overflow-wrap: anywhere; }
+.fluentread-service-option :deep(.service-brand-icon) { flex: none; box-shadow: none; }
+
+.settings-subgroup-heading {
+  padding: 16px 16px 10px;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.settings-subgroup-heading h3 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.settings-subgroup-heading p {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 10.5px;
+  line-height: 1.55;
+}
+
+:deep(.settings-navigation-link),
+.settings-inline-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 0;
+  color: var(--brand-strong);
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+:deep(.settings-navigation-link) { padding: 6px 0; }
+:deep(.settings-heading-link) { margin-left: auto; min-height: 32px; flex-shrink: 0; }
+:deep(.settings-navigation-link:hover),
+.settings-inline-link:hover { color: var(--brand); text-decoration: underline; text-underline-offset: 3px; }
+:deep(.settings-navigation-link:focus-visible),
+.settings-inline-link:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; border-radius: 4px; }
+:deep(.settings-navigation-link .el-icon) { font-size: 14px; }
+.settings-inline-link { padding: 0; font-size: inherit; font-weight: 700; }
+
+@media (max-width: 480px) {
+  .service-default-control { max-width: none; }
+}
+
+.capability-warning { margin: 6px 0 0; color: var(--fr-warning); font-size: 11px; line-height: 1.5; }
+.settings-switch { --el-switch-on-color: #ef4776; --el-switch-off-color: #cfd5df; }
+
+.feature-help {
+  width: min(100%, 1080px);
+  margin: -6px auto 22px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  color: var(--muted);
+  background: var(--surface-soft);
+  font-size: 10.5px;
+}
+.feature-help summary { padding: 11px 0; color: var(--ink); cursor: pointer; font-weight: 700; }
+.feature-help p { margin: 0; padding: 0 0 12px; line-height: 1.6; }
+
+.disabled-section {
+  margin: 18px 12px 8px;
+  padding: 28px;
+  border: 1px dashed #d8dce6;
+  border-radius: 16px;
+  color: #677084;
+  background: #f8f9fb;
+  text-align: center;
+}
+
+.disabled-section strong {
+  color: #263044;
+  font-size: 15px;
+}
+
+.disabled-section p {
+  margin: 7px 0 0;
+  font-size: 11px;
+}
+
+.service-connection-section {
+  margin-top: 22px;
+  padding-top: 22px;
+  border-top: 1px solid #e8eaf0;
+}
+
+.subsection-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  margin: 0 12px 16px;
+}
+
+.subsection-heading > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.subsection-heading span {
+  color: #dc315f;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .08em;
+}
+
+.subsection-heading strong {
+  margin-top: 4px;
+  color: #172033;
+  font-size: 17px;
+}
+
+.subsection-heading p {
+  margin: 0;
+  color: #7c8495;
+  font-size: 10px;
+}
+
+.data-section {
+  min-height: 260px;
+}
+
+.select-left {
+  text-align: left;
+}
+
+.flex-end {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* 请求限制的三项数值由独立组件渲染，补上它与后续设置行之间的分隔线。 */
+.request-limit-fields + .settings-item { border-top: 1px solid var(--line); }
+.request-retry-settings { border-top: 1px solid var(--line); }
+.request-retry-settings > summary { padding: 14px 20px; color: var(--ink); font-size: 13px; cursor: pointer; }
+.request-retry-settings[open] > summary { border-bottom: 1px solid var(--line); }
+.task-scheduler-group :deep(.settings-group-body) {
+  padding: 12px;
+  background: transparent;
+  box-shadow: none;
+}
+
+.task-scheduler-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.scheduler-setting-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  min-height: 68px;
+  padding: 11px 13px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--surface-soft);
+  transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+.scheduler-setting-row:hover {
+  border-color: #efb5c5;
+  background: var(--surface);
+  box-shadow: 0 7px 18px rgba(31, 40, 61, .045);
+}
+
+.scheduler-setting-row .settings-control-label,
+.scheduler-setting-row .settings-control-field {
+  min-width: 0;
+}
+
+.scheduler-setting-row .settings-control-label {
+  display: flex;
+  align-items: center;
+}
+
+.scheduler-setting-row .settings-control-field {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.scheduler-setting-row .popup-text {
+  min-width: 0;
+  line-height: 1.4;
+}
+
+.scheduler-number-field {
+  position: relative;
+  width: min(100%, 184px);
+  min-width: 0;
+}
+
+.scheduler-number-field :deep(.el-input-number) {
+  width: 100%;
+  min-width: 0;
+}
+
+.scheduler-number-field :deep(.el-input-number .el-input__inner) {
+  text-align: right;
+}
+
+.scheduler-number-field[data-unit] :deep(.el-input-number .el-input__inner) {
+  padding-right: 38px;
+}
+
+.scheduler-number-field[data-unit]::after {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  z-index: 1;
+  color: var(--muted);
+  content: attr(data-unit);
+  font-size: 11px;
+  line-height: 1;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.scheduler-setting-row :deep(.el-input-number__increase),
+.scheduler-setting-row :deep(.el-input-number__decrease) {
+  display: none;
+}
+
+.scheduler-effect-row {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+  padding: 11px 13px;
+  border: 1px solid rgba(239, 71, 118, .18);
+  border-radius: 13px;
+  background: linear-gradient(135deg, var(--brand-soft), var(--surface));
+}
+
+.scheduler-effect-label {
+  flex: 0 0 auto;
+  color: var(--brand-strong);
+  font-size: 11px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.scheduler-effect-row p {
+  min-width: 0;
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+@media (max-width: 820px) {
+  .task-scheduler-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 520px) {
+  .task-scheduler-group :deep(.settings-group-body) { padding: 9px; }
+  .scheduler-setting-row { grid-template-columns: 1fr; gap: 8px; }
+  .scheduler-setting-row .settings-control-field { justify-content: stretch; }
+  .scheduler-number-field { width: 100%; max-width: none; }
+  .scheduler-effect-row { align-items: flex-start; flex-direction: column; gap: 4px; }
+}
+
+.select-divider {
+  background: #f2f6fc;
+  color: #409eff;
+  font-size: 12px;
+  padding: 4px 12px;
+  cursor: default;
+  font-weight: 500;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  border-bottom: 1px solid #e4e7ed;
+  margin: 4px 0;
+  pointer-events: none;
+  opacity: 0.9;
+}
+
+.icon-margin {
+  margin-left: 0.25em;
+}
+
+/* 添加自适应样式 */
+:deep(.el-select) {
+  width: 100%;
+}
+
+:deep(.el-input) {
+  width: 100%;
+}
+
+.margin-bottom {
+  margin-bottom: 10px;
+}
+
+.margin-left-2em {
+  margin-left: 1em;
+  margin-right: 1em;
+}
+
+/* 设置滚动条样式 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #ddd;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f5f5f5;
+  border-radius: 3px;
+}
+
+/* 自定义快捷键相关样式 */
+.hotkey-config {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+/* 触发方式下方的提示沿用设置行说明的字号，只在入口不可用时改用警示色。 */
+.selection-context-menu-hint.is-unavailable {
+  color: var(--el-color-warning-dark-2);
+}
+
+.custom-hotkey-display {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 36px;
+  padding: 4px 8px 4px 12px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  font-size: 12px;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.hotkey-text {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-weight: 600;
+  color: var(--el-color-primary);
+  font-size: 13px;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  max-width: calc(100% - 32px);
+}
+
+.edit-button {
+  padding: 2px 4px;
+  margin-left: 4px;
+  color: var(--el-color-primary);
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.edit-button:hover {
+  background: var(--el-color-primary-light-8);
+}
+
+.edit-button .el-icon {
+  font-size: 12px;
+}
+
+.placeholder-text {
+  color: var(--el-text-color-placeholder) !important;
+  font-style: italic;
+  font-family: inherit !important;
+  font-weight: normal !important;
+}
+
+/* 错误样式 */
+.input-error {
+  border-color: var(--el-color-danger) !important;
+}
+
+.input-error:focus {
+  border-color: var(--el-color-danger) !important;
+  box-shadow: 0 0 0 2px rgba(245, 108, 108, 0.2) !important;
+}
+
+.error-text {
+  color: var(--el-color-danger);
+  font-size: 12px;
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+.image-settings-details { margin: 0; }
+.image-settings-details > summary, .area-translation-details > summary { cursor: pointer; font-size: 14px; font-weight: 600; color: var(--el-text-color-primary); }
+.image-settings-details[open] > summary { margin-bottom: 14px; }

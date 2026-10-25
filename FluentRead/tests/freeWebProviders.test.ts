@@ -1,0 +1,268 @@
+import {protectedDocumentLongMathParagraph} from './fixtures/documentLongMathParagraph';
+import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
+import {translateFreeWebText, type FreeWebProvider} from '@/src/providers/translation/free-web';
+import {setRuntimeFetch} from '@/src/platform/http/runtime';
+import {serializeTranslationSlots, parseTranslationSlots} from '@/src/core/translation/serialization';
+import {Config, normalizeConfig} from '@/src/core/config/model';
+import {options, services} from '@/src/core/config/catalog';
+import {prepareConfigForExport, prepareConfigForImport} from '@/src/core/config/transfer';
+import {createFreeFallbackRunner} from '@/src/services/translation/freeFallback';
+import {translateBilibiliFree} from '@/src/providers/translation/bilibili-free';
+import {translateDoubaoWeb, DOUBAO_WEB_HOME} from '@/src/providers/translation/doubao-web';
+import {translateFreeChineseWebText} from '@/src/providers/translation/free-chinese-web';
+import {translateExtraFreeWebText} from '@/src/providers/translation/free-extra-web';
+import {translateOfficialFreeWebText} from '@/src/providers/translation/free-official-web';
+import {translateMyMemoryText} from '@/src/providers/translation/mymemory';
+import {withProviderSnapshot} from './helpers/providerSnapshot';
+
+const providers: FreeWebProvider[] = ['transmart', 'yandexFree', 'volcengineFree'];
+const fetchMock = vi.fn<typeof fetch>();
+const reply = (text: unknown = '译文') => Response.json({header: {ret_code: 'succ'}, auto_translation: [text], code: 200, text: [text], base_resp: {status_code: 0}, translation: text});
+const translate = (provider: FreeWebProvider, text = 'Hello', from = 'auto', to = 'zh-Hans', signal?: AbortSignal) => translateFreeWebText(provider, text, from, to, signal);
+const flush = async () => {for (let step = 0; step < 20; step += 1) await Promise.resolve();};
+function streamResponse(status: number) {
+    const cancel = vi.fn(() => new Promise<void>(() => {}));
+    let body!: ReadableStreamDefaultController<Uint8Array>;
+    const response = new Response(new ReadableStream<Uint8Array>({start(controller) {
+        body = controller;
+        controller.enqueue(new TextEncoder().encode('private incomplete response'));
+    }, cancel}), {status, headers: {'Retry-After': '2'}});
+    return {response, body, cancel};
+}
+beforeEach(() => {fetchMock.mockReset().mockImplementation(async () => reply()); setRuntimeFetch(fetchMock);});
+afterEach(() => setRuntimeFetch());
+
+describe('free provider slot packet integrity', () => {
+    const adapters = [
+        {id: 'bilibili', translate: (origin: string) => translateBilibiliFree({origin, sourceLanguage: 'en', targetLanguage: 'zh-Hans'}),
+            response: (text: string) => Response.json({choices: [{finish_reason: 'stop', message: {content: text}}]})},
+        {id: 'doubaoWeb', translate: (origin: string) => translateDoubaoWeb({origin, sourceLanguage: 'en', targetLanguage: 'zh-Hans'}),
+            response: (text: string) => new Response(`event: json\ndata: ${JSON.stringify({code: 0, data: {items: [{index: 0, res: text}]}})}\n\nevent: done\ndata:\n\n`,
+                {headers: {'content-type': 'text/event-stream'}})},
+        {id: 'volcengineFree', translate: (origin: string) => translateFreeWebText('volcengineFree', origin, 'en', 'zh-Hans'),
+            response: (text: string) => Response.json({base_resp: {status_code: 0}, translation: text})},
+        {id: 'youdaoFree', translate: (origin: string) => translateFreeChineseWebText('youdaoFree', origin, 'en', 'zh-Hans'),
+            response: (text: string) => Response.json({fanyi: {type: 'en2zh-chs', tran: text}})},
+        {id: 'reversoFree', translate: (origin: string) => translateExtraFreeWebText('reversoFree', origin, 'en', 'zh-Hans'),
+            response: (text: string) => Response.json({translation: [text]})},
+        {id: 'modernMtFree', translate: (origin: string) => translateOfficialFreeWebText('modernMtFree', origin, 'en', 'zh-Hans'),
+            response: (text: string) => Response.json({status: 200, data: {translation: text}})},
+        {id: 'myMemory', translate: (origin: string) => translateMyMemoryText(origin,
+            withProviderSnapshot({sourceLanguage: 'en', targetLanguage: 'zh-Hans'}, {service: 'myMemory'})),
+            response: (text: string) => Response.json({responseStatus: 200, responseData: {translatedText: text}})},
+    ];
+    function installAdapter(adapter: typeof adapters[number], outputs: readonly string[]) {
+        let ordinal = 0;
+        fetchMock.mockImplementation(async input => String(input) === DOUBAO_WEB_HOME
+            ? new Response(JSON.stringify({ttwid: 'synthetic-guest', web_id: '7390000000000000001'}))
+            : adapter.response(outputs[ordinal++]!));
+    }
+
+    describe.each(adapters)('$id slot packet', adapter => {
+        it.each([undefined, 'custom-slots'])('retains namespace %s with literal inner markers, empty slots and whitespace', async nonce => {
+            const literal = '___FLUENTREAD_literal_0_BEGIN___sample___FLUENTREAD_literal_0_END___';
+            const packet = serializeTranslationSlots([literal, '', ' \n\t', ' Tail '], nonce);
+            installAdapter(adapter, [`译文${literal}`, '尾译']);
+            const output = await adapter.translate(packet.payload);
+            expect(parseTranslationSlots(packet, output)).toEqual([`译文${literal}`, '', ' \n\t', ' 尾译 ']);
+            expect(output.startsWith(packet.starts[0]!)).toBe(true);
+            expect(output.endsWith(packet.ends[3]!)).toBe(true);
+        });
+
+        it.each(['same-begin', 'same-end', 'other-begin', 'other-end', 'crossed'] as const)
+        ('rejects active outer markers in translated content: %s', async kind => {
+            const packet = serializeTranslationSlots(['First', 'Second'], 'fixed-slots');
+            const marker = { 'same-begin': packet.starts[0], 'same-end': packet.ends[0],
+                'other-begin': packet.starts[1], 'other-end': packet.ends[1],
+                crossed: `${packet.starts[1]}crossed${packet.ends[0]}` }[kind];
+            installAdapter(adapter, [`译文${marker}`, '第二条']);
+            await expect(adapter.translate(packet.payload)).rejects.toThrow();
+        });
+    });
+});
+
+describe('free-only web providers', () => {
+    it.each(providers)('%s cancels an endless failure without waiting for the cancellation handshake', async provider => {
+        const {response, cancel} = streamResponse(429);
+        fetchMock.mockResolvedValueOnce(response);
+        const request = translate(provider).catch(error => error);
+        await flush();
+        expect(cancel).toHaveBeenCalledOnce();
+        await expect(request).resolves.toMatchObject({statusCode: 429, retryAfterMs: 2_000});
+        expect((await request).message).not.toContain('private incomplete response');
+    });
+
+    it.each(providers)('%s cancels late unread headers and releases capacity for the next route', async provider => {
+        const run = createFreeFallbackRunner(1);
+        const owner = new AbortController();
+        const {response, cancel} = streamResponse(200);
+        let deliverHeaders!: (response: Response) => void;
+        fetchMock.mockImplementationOnce(() => new Promise<Response>(resolve => {deliverHeaders = resolve;}));
+        const first = run([{identity: 'late-headers', label: provider,
+            translate: signal => translate(provider, 'a'.repeat(1_001), 'en', 'zh-Hans', signal)}],
+        {signal: owner.signal, timeoutMs: 5_000, cooldownMs: 1_000}).catch(error => error);
+        await flush();
+        expect(fetchMock).toHaveBeenCalledOnce();
+        owner.abort();
+        await expect(first).resolves.toMatchObject({name: 'AbortError'});
+        deliverHeaders(response);
+        const next = run([{identity: 'after-late-headers', label: provider,
+            translate: signal => translate(provider, 'next source', 'en', 'zh-Hans', signal)}], {timeoutMs: 5_000, cooldownMs: 1_000});
+        await flush();
+        expect(cancel).toHaveBeenCalledOnce();
+        await expect(next).resolves.toBe('译文');
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+
+    it.each(providers)('%s preserves the original HTTP or abort error when an unread body fails', async provider => {
+        const http = streamResponse(429);
+        http.cancel.mockImplementationOnce(() => Promise.reject(new Error('cleanup failure')));
+        fetchMock.mockResolvedValueOnce(http.response);
+        const rejected = translate(provider).catch(error => error);
+        await flush();
+        expect(http.cancel).toHaveBeenCalledOnce();
+        await expect(rejected).resolves.toMatchObject({statusCode: 429, retryAfterMs: 2_000});
+
+        const owner = new AbortController(), reason = new Error('cancelled before late headers');
+        const aborted = streamResponse(503);
+        aborted.cancel.mockImplementationOnce(() => Promise.reject(new Error('late cleanup failure')));
+        fetchMock.mockImplementationOnce(async () => {owner.abort(reason); return aborted.response;});
+        const cancelled = translate(provider, 'Hello', 'en', 'zh-Hans', owner.signal).catch(error => error);
+        await flush();
+        expect(aborted.cancel).toHaveBeenCalledOnce();
+        await expect(cancelled).resolves.toBe(reason);
+    });
+
+    it('preserves minimal fake Response compatibility and never rereads a consumed success body', async () => {
+        fetchMock.mockResolvedValueOnce({ok: false, status: 429, statusText: 'Too Many Requests', headers: new Headers()} as Response);
+        await expect(translate('transmart')).rejects.toMatchObject({statusCode: 429});
+        const response = reply(), clone = vi.spyOn(response, 'clone');
+        fetchMock.mockResolvedValueOnce(response);
+        await expect(translate('transmart')).resolves.toBe('译文');
+        expect(response.bodyUsed).toBe(true);
+        expect(clone).not.toHaveBeenCalled();
+    });
+
+    it.each(providers)('%s never sends a partial token from the actual long mathematical paragraph', async provider => {
+        const packet = protectedDocumentLongMathParagraph(), observed: string[] = [];
+        fetchMock.mockImplementation(async (url, init) => {
+            const body = init!.body ? JSON.parse(String(init!.body)) : null;
+            const text = provider === 'yandexFree' ? new URL(String(url)).searchParams.get('text')! : provider === 'transmart' ? body.source.text_list[0] : body.text;
+            observed.push(text); return reply(text);
+        });
+        const slots = serializeTranslationSlots([packet.text, 'tail'], 'protected-web');
+        expect(parseTranslationSlots(slots, await translate(provider, slots.payload))).toEqual([packet.text, 'tail']);
+        expect(observed.every(text => [...text].length <= 1000 && !text.includes('___FLUENTREAD'))).toBe(true);
+        for (const token of packet.tokens) expect(observed.filter(text => text.includes(token))).toHaveLength(1);
+    });
+
+    it('names Yandex network failures and preserves cooperative cancellation', async () => {
+        fetchMock.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+        await expect(translateFreeWebText('yandexFree', 'Hello', 'en', 'zh-Hans')).rejects.toThrow('Yandex 网络连接失败');
+        const controller = new AbortController();
+        fetchMock.mockImplementationOnce(async () => {controller.abort(); throw new TypeError('Failed to fetch');});
+        await expect(translateFreeWebText('yandexFree', 'Hello', 'en', 'zh-Hans', controller.signal)).rejects.toMatchObject({name: 'AbortError'});
+        fetchMock.mockRejectedValueOnce(new Error('existing'));
+        await expect(translateFreeWebText('yandexFree', 'Hello', 'en', 'zh-Hans')).rejects.toThrow('existing');
+    });
+
+    it('only accepts new IDs inside the free policy, preserves existing policy and round-trips selections', () => {
+        expect(new Config().freeTranslationOrder).toEqual(['microsoft', 'bilibiliFree', 'transmart', 'volcengineFree', 'doubaoWeb', 'google', 'youdaoFree', 'icibaFree', 'yandexFree', 'myMemory', 'reversoFree', 'apertiumFree', 'alibabaFree', 'modernMtFree', 'laraFree', 'lingvanexFree']);
+        for (const id of providers) {
+            expect(Object.values(services)).not.toContain(id);
+            expect(options.services.some(item => item.value === id)).toBe(false);
+        }
+        expect(normalizeConfig({freeTranslationOrder: ['google']}).freeTranslationOrder).toEqual(['bilibiliFree', 'google']);
+        const current = normalizeConfig({...new Config(), freeTranslationOrder: providers});
+        expect(prepareConfigForImport(prepareConfigForExport(current), new Config()).freeTranslationOrder).toEqual(providers);
+    });
+    it('uses a generated anonymous Tencent client marker and preserves a single text without credentials', async () => {
+        await expect(translate('transmart')).resolves.toBe('译文');
+        const [url, init] = fetchMock.mock.calls[0]!;
+        expect(url).toBe('https://transmart.qq.com/api/imt');
+        expect(init).toMatchObject({method: 'POST', credentials: 'omit', headers: {'Content-Type': 'application/json'}});
+        const body = JSON.parse(String(init!.body));
+        expect(body.header.client_key).toMatch(/^browser-chrome-110\.0\.0-Mac OS-[a-f0-9-]+-\d+$/u);
+        expect(Object.keys(body.header)).toEqual(['fn', 'client_key']);
+        expect(body.source).toEqual({text_list: ['Hello'], lang: 'auto'});
+        expect(body.target).toEqual({lang: 'zh'});
+    });
+    it('omits auto source for Yandex and URL-encodes text without adding cookies or auth headers', async () => {
+        await translate('yandexFree', 'Hello & 你好? # /');
+        const url = new URL(String(fetchMock.mock.calls[0]![0]));
+        expect(url.origin + url.pathname).toBe('https://translate.yandex.net/api/v1/tr.json/translate');
+        expect(url.searchParams.get('text')).toBe('Hello & 你好? # /');
+        expect(url.searchParams.get('id')).toMatch(/^[a-f0-9]{32}-0-0$/u);
+        expect(url.searchParams.has('source_lang')).toBe(false);
+        expect(url.searchParams.get('target_lang')).toBe('zh');
+        await translate('yandexFree', '你好', 'zh-Hant', 'en');
+        const explicit = new URL(String(fetchMock.mock.calls[1]![0]));
+        expect(explicit.searchParams.get('source_lang')).toBe('zh');
+    });
+    it('calls the final Volcano path directly using plain JSON', async () => {
+        await translate('volcengineFree', 'Hello', 'en');
+        expect(fetchMock.mock.calls[0]![0]).toBe('https://translate.volcengine.com/crx/translate/v1/');
+        expect(JSON.parse(String(fetchMock.mock.calls[0]![1]!.body))).toEqual({source_language: 'en', target_language: 'zh', text: 'Hello'});
+    });
+    it('keeps Chinese scripts distinct and rejects unsupported targets without network', async () => {
+        await translate('transmart', 'Hello', 'en', 'zh-TW');
+        expect(JSON.parse(String(fetchMock.mock.calls[0]![1]!.body)).target.lang).toBe('zh-tw');
+        await translate('volcengineFree', 'Hello', 'en', 'zh-Hant');
+        expect(JSON.parse(String(fetchMock.mock.calls[1]![1]!.body)).target_language).toBe('zh-Hant');
+        fetchMock.mockClear();
+        await expect(translate('yandexFree', 'Hello', 'en', 'zh-Hant')).rejects.toMatchObject({statusCode: 400});
+        await expect(translate('transmart', 'Hello', 'en', 'auto')).rejects.toMatchObject({statusCode: 400});
+        expect(fetchMock).not.toHaveBeenCalled();
+    });
+    it.each(providers)('%s preserves slot boundaries, lines, whitespace and non-BMP text within bounded chunks', async provider => {
+        const input = '  ' + '😀'.repeat(1100) + '\r\n\tHello  ';
+        const observed: string[] = [];
+        fetchMock.mockImplementation(async (url, init) => {
+            const body = init!.body ? JSON.parse(String(init!.body)) : null;
+            const text = provider === 'yandexFree' ? new URL(String(url)).searchParams.get('text')! : provider === 'transmart' ? body.source.text_list[0] : body.text;
+            observed.push(text); return reply(text);
+        });
+        const slots = serializeTranslationSlots([input, 'Bye'], 'free-web-test');
+        const output = await translate(provider, slots.payload);
+        expect(parseTranslationSlots(slots, output)).toEqual([input, 'Bye']);
+        expect(observed.every(text => Array.from(text).length <= 1000 && !text.includes('___FLUENTREAD'))).toBe(true);
+        await expect(translate(provider, '\n  ')).resolves.toBe('\n  ');
+        await expect(translate(provider, 42 as never)).rejects.toMatchObject({statusCode: 400});
+    });
+    it.each(providers)('%s handles transport and malformed JSON without reflecting response contents', async provider => {
+        fetchMock.mockResolvedValueOnce(new Response('private data', {status: 429}));
+        await expect(translate(provider)).rejects.toMatchObject({statusCode: 429});
+        fetchMock.mockResolvedValueOnce(new Response('private data'));
+        await expect(translate(provider)).rejects.toThrow('JSON');
+        for (const body of [null, {}, {header: {}, base_resp: {}}, {code: '400'}, {code: 399}, {code: 600}, {code: 400.5}]) {
+            fetchMock.mockResolvedValueOnce(Response.json(body));
+            await expect(translate(provider)).rejects.toMatchObject({statusCode: 502});
+        }
+        for (const text of ['', ' ', null, 42]) {
+            fetchMock.mockResolvedValueOnce(reply(text));
+            await expect(translate(provider)).rejects.toMatchObject({statusCode: 502});
+        }
+    });
+    it('classifies protocol errors and rejects malformed translation arrays', async () => {
+        fetchMock.mockResolvedValueOnce(Response.json({header: {ret_code: 'Auth-Failed'}, message: 'secret'}));
+        await expect(translate('transmart')).rejects.toMatchObject({statusCode: 403});
+        fetchMock.mockResolvedValueOnce(Response.json({code: 429}));
+        await expect(translate('yandexFree')).rejects.toMatchObject({statusCode: 429});
+        for (const value of [null, [], 'invalid']) {
+            fetchMock.mockResolvedValueOnce(Response.json({code: 200, text: value}));
+            await expect(translate('yandexFree')).rejects.toMatchObject({statusCode: 502});
+        }
+    });
+    it.each(providers)('%s honours cancellation before fetch and after delayed network or JSON completion', async provider => {
+        const cancelled = new AbortController(); cancelled.abort();
+        await expect(translate(provider, 'Hello', 'auto', 'zh-Hans', cancelled.signal)).rejects.toMatchObject({name: 'AbortError'});
+        expect(fetchMock).not.toHaveBeenCalled();
+        const late = new AbortController();
+        fetchMock.mockImplementationOnce(async (_url, init) => {expect(init!.signal).toBe(late.signal); late.abort(); return reply();});
+        await expect(translate(provider, 'Hello', 'auto', 'zh-Hans', late.signal)).rejects.toMatchObject({name: 'AbortError'});
+        const jsonLate = new AbortController();
+        const response = reply(); response.json = async () => {jsonLate.abort(); return {};};
+        fetchMock.mockResolvedValueOnce(response);
+        await expect(translate(provider, 'Hello', 'auto', 'zh-Hans', jsonLate.signal)).rejects.toMatchObject({name: 'AbortError'});
+    });
+});

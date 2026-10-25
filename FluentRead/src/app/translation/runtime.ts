@@ -1,0 +1,97 @@
+/**
+ * @file src/app/translation/runtime.ts
+ * 文件职责：在 app 层创建扩展与 userscript 共用的翻译 broker 单例，把配置、provider registry、缓存、端点和提示词依赖完整注入。
+ * 主要内容：连接全局启停与在途取消、配置水合与缓存阈值订阅、服务类型和模型解析、OpenAI 兼容端点（含 MiniMax/MiMo 区域路由）、页面摘要 prompt、语言推导、凭据错误、缓存 key，以及扩展侧模型用量与翻译统计仓库，导出 translateWithCache、clear、cleanup 与用量查询。
+ * 模块边界：本文件只做 broker composition，不解析 browser 消息、不实现 provider HTTP，也不管理页面队列；模型用量与翻译统计仅在扩展协议下落库，userscript 不会把统计分散写进网页 origin。
+ */
+import {translationProviderRegistry} from '@/src/providers/translation/registry';
+import {AI_SDK_TRANSPORT_PROFILE, resolveOpenAICompatibleEndpoint} from '@/src/providers/translation/ai-sdk/endpoints';
+import {config, configReady, subscribeConfig} from '@/src/services/config/store';
+import {getMissingCredentialMessage} from '@/src/core/config/validation';
+import {resolveConfiguredModel, servicesType} from '@/src/core/config/catalog';
+import {buildPageSummaryPrompt, buildPageSummarySystemPrompt} from '@/src/core/translation/prompts';
+import {getTranslationLanguages} from '@/src/services/translation/languages';
+import {createTranslationBroker} from '@/src/services/translation/broker';
+import {buildTranslationCacheKey, translationCache} from '@/src/services/translation/cache';
+import {createTranslationCachePolicyBinding} from '@/src/services/translation/cachePolicyBinding';
+import {getModelUsageRepository} from '@/src/platform/storage/modelUsageRepository';
+import {getTranslationStatsRepository} from '@/src/platform/storage/translationStatsRepository';
+import {createTranslationRequestScheduler} from '@/src/services/translation/requestScheduler';
+import {createTranslationAvailability} from '@/src/services/translation/availability';
+
+function isExtensionModelUsageRuntime(): boolean {
+    const protocol = globalThis.location?.protocol;
+    return protocol === 'chrome-extension:'
+        || protocol === 'moz-extension:'
+        || protocol === 'safari-web-extension:';
+}
+
+const cachePolicy = createTranslationCachePolicyBinding({
+    ready: configReady,
+    getConfig: () => config,
+    subscribe: subscribeConfig,
+    setLimits: (limits) => translationCache.setLimits(limits),
+    warn: (error) => console.warn('[FluentRead] translation cache policy failed:', error),
+});
+
+/** 后台所有翻译入口共用的 scheduler；provider attempt 与 broker 请求使用同一 bucket 历史。 */
+export const translationRequestScheduler = createTranslationRequestScheduler(
+    () => config,
+);
+
+const broker = createTranslationBroker({
+    ready: cachePolicy.ready,
+    getConfig: () => config,
+    providers: translationProviderRegistry,
+    cache: translationCache,
+    serviceTypes: servicesType,
+    endpointResolver: {
+        resolveOpenAICompatibleEndpoint,
+        aiSdkTransportProfile: AI_SDK_TRANSPORT_PROFILE,
+    },
+    promptBuilder: {
+        buildPageSummaryPrompt,
+        buildPageSummarySystemPrompt,
+    },
+    getMissingCredentialMessage,
+    getTranslationLanguages,
+    resolveConfiguredModel,
+    buildTranslationCacheKey,
+    // 在组合边界按构建能力移除统计依赖；broker 未注入的统计旁路默认不采集，代次为 0。
+    // 扩展构建仍检查实际 origin，防止内容页把统计分散写入网页的 IndexedDB。
+    ...(import.meta.env.BROWSER === 'userscript' ? {} : {
+        captureModelUsageGeneration: () => isExtensionModelUsageRuntime()
+            ? getModelUsageRepository().captureGeneration()
+            : 0,
+        recordModelUsage: async (events, generation) => {
+            if (!isExtensionModelUsageRuntime()) return;
+            await getModelUsageRepository().recordMany(events, generation);
+        },
+        captureTranslationStatsGeneration: () => isExtensionModelUsageRuntime()
+            ? getTranslationStatsRepository().captureGeneration()
+            : 0,
+        recordTranslationRequest: (event, generation) => {
+            if (isExtensionModelUsageRuntime()) getTranslationStatsRepository().record(event, generation);
+        },
+    }),
+    requestScheduler: translationRequestScheduler,
+});
+
+/** 扩展与 userscript 共用的翻译 broker singleton。 */
+export const {translateWithCache} = createTranslationAvailability({
+    ready: configReady,
+    getConfig: () => config,
+    subscribe: subscribeConfig,
+    translate: broker.translateWithCache,
+});
+export const clearTranslationCache = broker.clearTranslationCache;
+export async function cleanupTranslationCache(): Promise<void> {
+    await cachePolicy.ready;
+    await broker.cleanupTranslationCache();
+}
+
+/** 管理请求等待当前阈值落地，再返回仅包含数量和容量的统计。 */
+export async function getTranslationCacheStats() {
+    await cachePolicy.applyLatest();
+    return translationCache.getStats();
+}

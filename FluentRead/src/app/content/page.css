@@ -1,0 +1,293 @@
+/**
+ * @file src/app/content/page.css
+ * 文件职责：定义内容脚本直接注入宿主文档的 FluentRead 专属视觉状态，覆盖翻译占位、重试、图片覆盖层、输入框反馈、已翻译提示框的鼠标命中保护与双语逐句高亮。
+ * 主要内容：包含轻量个人校订来源文字、错误原因与重试控件、图片翻译按钮和 canvas、输入框 translating/success/error tooltip、显式换行源文行容器和 GitHub ListView 双语标题的空行修复；段落 loading 已由自带 Shadow Root 的组件隔离。
+ * 模块边界：选择器均以 fluent 前缀或受控状态类约束，不承担 Shadow UI 组件主题，也不决定何时添加类名；双语译文容器与译文样式预设统一在 src/ui/styles/translation-display.css，由 pageStyles 一并注入。
+ */
+/* 内容脚本注入到宿主页面的 FluentRead 专属样式。 */
+/* 来源提示不进入译文复制、校订内容或 provider 缓存。 */
+.fluent-read-bilingual-content[data-fr-personal-correction="true"]::after {
+    content: '个人校订';
+    font: 400 11px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: inherit;
+    opacity: 0.65;
+    margin-inline-start: 0.5em;
+    white-space: nowrap;
+    user-select: none;
+}
+.fluent-read-retry-wrapper {
+    display: inline-flex !important;
+    max-width: 100% !important;
+    margin-inline-start: 0.45em !important;
+    align-items: center !important;
+    flex-wrap: wrap !important;
+    gap: 0.38em !important;
+    color: inherit !important;
+    font: inherit !important;
+    line-height: 1.2 !important;
+    vertical-align: middle !important;
+    white-space: normal !important;
+    pointer-events: auto !important;
+}
+
+.fluent-read-failure-action {
+    box-sizing: border-box !important;
+    display: inline-flex !important;
+    min-height: 1.7em !important;
+    margin: 0 !important;
+    padding: 0.16em 0.46em !important;
+    border: 1px solid rgba(66, 138, 223, 0.28) !important;
+    align-items: center !important;
+    gap: 0.26em !important;
+    border-radius: 999px !important;
+    color: #2f78c9 !important;
+    background: rgba(66, 138, 223, 0.08) !important;
+    box-shadow: none !important;
+    font: inherit !important;
+    font-size: 0.88em !important;
+    font-style: normal !important;
+    font-weight: 600 !important;
+    letter-spacing: normal !important;
+    line-height: 1.2 !important;
+    text-decoration: none !important;
+    text-transform: none !important;
+    white-space: nowrap !important;
+    cursor: pointer !important;
+    pointer-events: auto !important;
+    user-select: none !important;
+}
+
+.fluent-read-failure-action:hover,
+.fluent-read-failure-action:focus-visible {
+    border-color: rgba(66, 138, 223, 0.48) !important;
+    background: rgba(66, 138, 223, 0.14) !important;
+    outline: none !important;
+    box-shadow: 0 0 0 2px rgba(66, 138, 223, 0.12) !important;
+}
+
+.fluent-read-reason {
+    border-color: rgba(180, 107, 0, 0.28) !important;
+    color: #9a5b12 !important;
+    background: rgba(245, 158, 11, 0.08) !important;
+}
+
+.fluent-read-reason:hover,
+.fluent-read-reason:focus-visible {
+    border-color: rgba(180, 107, 0, 0.46) !important;
+    background: rgba(245, 158, 11, 0.14) !important;
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.12) !important;
+}
+
+.fluent-read-action-icon {
+    display: inline-flex !important;
+    width: 1em !important;
+    height: 1em !important;
+    flex: 0 0 1em !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    align-items: center !important;
+    justify-content: center !important;
+    color: inherit !important;
+    line-height: 1 !important;
+    pointer-events: none !important;
+}
+
+.fluent-read-action-icon > svg {
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+    margin: 0 !important;
+    pointer-events: none !important;
+}
+
+.fluent-read-action-icon > svg path {
+    fill: currentColor !important;
+}
+
+.fluent-read-action-label {
+    color: inherit !important;
+    font: inherit !important;
+    line-height: inherit !important;
+    pointer-events: none !important;
+}
+
+/* 图片翻译覆盖层：翻译完成后用同尺寸位图层覆盖原图，避免原文字从译文下面透出。 */
+.fluent-read-image-translation-overlay {
+    position: fixed;
+    z-index: 2147483646;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.fluent-read-image-translation-canvas {
+    position: absolute;
+    inset: 0;
+    display: none;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.fluent-read-image-translation-button {
+    position: absolute;
+    left: 8px;
+    bottom: 8px;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    border-radius: 999px;
+    background: rgba(20, 20, 20, 0.68);
+    color: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.28);
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 24px;
+    opacity: 0.78;
+    pointer-events: auto;
+    transition: opacity 0.15s ease, transform 0.15s ease, background 0.15s ease;
+    z-index: 1;
+}
+
+.fluent-read-image-translation-button:hover,
+.fluent-read-image-translation-button:focus-visible {
+    background: rgba(20, 20, 20, 0.9);
+    opacity: 1;
+    outline: none;
+    transform: scale(1.06);
+}
+
+.fluent-read-image-translation-button[data-phase="loading"] {
+    animation: fluent-read-image-translation-pulse 1.1s ease-in-out infinite;
+}
+
+.fluent-read-image-translation-button[data-phase="error"] {
+    background: rgba(185, 28, 28, 0.88);
+}
+
+@keyframes fluent-read-image-translation-pulse {
+    0%, 100% { opacity: 0.52; }
+    50% { opacity: 1; }
+}
+
+/* 输入框翻译相关样式 - 柔和呼吸效果 */
+@keyframes fluent-read-input-box-translating {
+    0% {
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+    }
+    50% {
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+    }
+    100% {
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+    }
+}
+
+@keyframes fluent-read-input-box-success {
+    0% {
+        box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.3);
+    }
+    100% {
+        box-shadow: none;
+    }
+}
+
+@keyframes fluent-read-input-box-error {
+    0% {
+        box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.4);
+        transform: translateX(0);
+    }
+    25% {
+        transform: translateX(-1px);
+    }
+    75% {
+        transform: translateX(1px);
+    }
+    100% {
+        box-shadow: none;
+        transform: translateX(0);
+    }
+}
+
+.fluent-input-translating {
+    animation: fluent-read-input-box-translating 3s infinite ease-in-out;
+    transition: all 0.3s ease;
+}
+
+.fluent-input-success {
+    animation: fluent-read-input-box-success 1.5s ease-out;
+}
+
+.fluent-input-error {
+    animation: fluent-read-input-box-error 0.5s ease-out;
+}
+
+/* 翻译提示弹窗样式 - 柔和低调设计 */
+.fluent-input-tooltip {
+    position: fixed;
+    background: rgba(0, 0, 0, 0.75);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 400;
+    z-index: 10000;
+    pointer-events: none;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(3px);
+}
+
+.fluent-input-tooltip.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.fluent-input-tooltip.hide {
+    opacity: 0;
+    transform: translateY(-5px);
+}
+
+.fluent-input-tooltip.translating {
+    background: rgba(59, 130, 246, 0.85);
+}
+
+.fluent-input-tooltip.success {
+    background: rgba(34, 197, 94, 0.85);
+}
+
+.fluent-input-tooltip.error {
+    background: rgba(239, 68, 68, 0.85);
+}
+
+/* 显式换行的源文与译文占用同一行内盒子，避免块级译文与宿主 br 叠加出空白行。
+ * 仅约束 FluentRead 自建且可恢复的行容器，不修改宿主段落和换行节点。 */
+.fluent-read-source-line[data-fr-translation-segment="true"] {
+    display: inline-block;
+    width: 100%;
+    max-width: 100%;
+    vertical-align: top;
+}
+
+/* GitHub ListView 的行内标题后有带 padding 的空徽标占位符。块级译文会拆开
+ * 行内格式化上下文，把占位符推到独占的空行。仅在标题含自有译文时把原文与
+ * 译文收进同一个行内块，保留相邻徽标；移除译文后由 CSS 自动恢复宿主布局。 */
+[data-listview-item-title-container="true"] > h3:has(.fluent-read-bilingual-content[data-fr-translation-owned="true"]) {
+    display: inline-block;
+    max-width: 100%;
+    vertical-align: top;
+}
+
+/* 纯说明 tooltip 按原文高度定位后，译文增高可能盖住触发图标，导致
+ * mouseleave -> 关闭 -> mouseenter -> 重建的循环。仅让翻译中或已翻译且没有交互
+ * 控件的语义 tooltip（含旧 Bootstrap 结构）穿透鼠标；恢复原文后自动失效。
+ * 生命周期标记也覆盖直接改写 Text 的控件翻译，不能只依赖译文 wrapper。
+ * 不改变宿主监听器，也不影响带链接、表单、可聚焦控件的弹层。 */
+:is([role="tooltip"], .tooltip:has(> .tooltip-inner)):is([data-fr-tooltip-translation-active="true"], [data-fr-tooltip-translation-active="true"] *, :has([data-fr-tooltip-translation-active="true"]), :has(:is(.fluent-read-bilingual-content, .fluent-read-single-slot, .fluent-read-loading)[data-fr-translation-owned="true"])):not([tabindex], [contenteditable]:not([contenteditable="false"])):not(:has(a[href], button, input, select, textarea, summary, [tabindex], [contenteditable]:not([contenteditable="false"]), [role="button"], [role="link"], [role="dialog"])),
+:is([role="tooltip"], .tooltip:has(> .tooltip-inner)):is([data-fr-tooltip-translation-active="true"], [data-fr-tooltip-translation-active="true"] *, :has([data-fr-tooltip-translation-active="true"]), :has(:is(.fluent-read-bilingual-content, .fluent-read-single-slot, .fluent-read-loading)[data-fr-translation-owned="true"])):not([tabindex], [contenteditable]:not([contenteditable="false"])):not(:has(a[href], button, input, select, textarea, summary, [tabindex], [contenteditable]:not([contenteditable="false"]), [role="button"], [role="link"], [role="dialog"])) * {
+    pointer-events: none !important;
+}

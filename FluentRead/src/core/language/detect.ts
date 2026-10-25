@@ -1,0 +1,73 @@
+/**
+ * @file src/core/language/detect.ts
+ *
+ * 文件职责：提供各翻译入口共用的语言判断公开 API，把与目标无关的文本识别结论和配置中的目标语言、排除语言按同一规则比较。
+ * 主要内容：detectlang 返回规范语言代码，可信识别优先、否则给出统计最佳猜测或混合正文的 franc-min 整体排序，普通话无法确定简繁时返回 cmn、没有正文证据时返回 und；shouldSkipTranslationForTarget 只在文本无字母或整段被可信识别为目标语言/任一排除语言时跳过，未知、混合与夹带外语句子一律保留翻译；detectChineseScript 报告可信的单一中文书写体系；划词与翻译卡片额外按纯 Han 选区跳过中文目标；从 confidence.ts 转出 Chrome 现代语言检测的最低置信度边界。可核对的公开符号包括 detectlang、shouldSkipTranslationForTarget、isTextInLanguage、detectChineseScript、shouldSkipChineseSelection、MIN_CHROME_LANGUAGE_CONFIDENCE。
+ * 模块边界：本文件属于 core 领域层，只组合 identify.ts 与 codes.ts 的纯规则，并保留 confidence.ts 的同名阈值出口；不读取浏览器存储、页面 lang 或配置，不发起网络请求，也不挂载 Vue/WXT 入口，是否强制翻译等交互语义由调用方决定。
+ */
+
+import {franc} from 'franc-min';
+import {getChineseScript, type ChineseScript} from './chinese';
+import {isLanguageCodeMatch, normalizeDetectedLanguageCode} from './codes';
+import {identifyTextLanguage} from './identify';
+
+export {MIN_CHROME_LANGUAGE_CONFIDENCE} from './confidence';
+
+/**
+ * 返回文本的规范语言代码。可信识别结果优先；否则使用统计最佳猜测，供朗读音色、本地模型源语言等
+ * 需要猜测的场景使用。普通话书写体系不明确时返回 cmn，无法识别返回 und。该结果不能单独作为跳过依据。
+ */
+export function detectlang(origin: string): string {
+    const identification = identifyTextLanguage(origin);
+    if (identification.status === 'identified') {
+        return identification.languages.length === 1 ? identification.languages[0]! : 'cmn';
+    }
+    if (identification.bestGuess && identification.bestGuess !== 'zh') return identification.bestGuess;
+    // 只有标识符、名称或无法统计的文字时没有可用猜测；混合正文才退回 franc 的整体排序。
+    if (identification.status === 'unknown' && identification.bestGuess === undefined) return 'und';
+    const detected = franc(origin, {minLength: 0});
+    const normalized = normalizeDetectedLanguageCode(detected);
+    if (normalized === 'zh') return 'cmn';
+    return normalized || 'und';
+}
+
+/** 文本是否被可信识别为指定配置语言；简繁同形的中文同时属于简体与繁体目标。 */
+export function isTextInLanguage(origin: string, language: string): boolean {
+    const identification = identifyTextLanguage(origin);
+    return identification.status === 'identified'
+        && identification.languages.some(detected => isLanguageCodeMatch(detected, language));
+}
+
+/**
+ * 同语言预检只能省请求，绝不能让不确定文本静默漏译。目标语言和排除语言共用同一识别结论与代码比较；
+ * 没有字母的文本无需翻译；短歧义词、专有名词、纯共享汉字、混合文字和夹带外语句子都返回 false。
+ */
+export function shouldSkipTranslationForTarget(
+    origin: string,
+    targetLanguage: string,
+    excludedLanguages: readonly string[] = [],
+): boolean {
+    const identification = identifyTextLanguage(origin);
+    if (identification.status === 'empty') return true;
+    if (identification.status !== 'identified') return false;
+    return [targetLanguage, ...excludedLanguages].some(language =>
+        identification.languages.some(detected => isLanguageCodeMatch(detected, language)));
+}
+
+/** 只报告有明确中文证据且字形一致的文本，不为简繁同形中文猜测简体或繁体。 */
+export function detectChineseScript(value: string): ChineseScript | undefined {
+    const identification = identifyTextLanguage(value);
+    if (identification.status !== 'identified' || identification.languages.length !== 1) return undefined;
+    return getChineseScript(identification.languages[0]!);
+}
+
+/**
+ * 中文目标下，划词与翻译卡片不为纯汉字选区提供翻译入口，包括短词、简繁汉字和
+ * 伴随的标点、数字、表情。只依据选区本身，不让页面语言掩盖其中的外语内容。
+ * 这是选区交互规则，不作为通用语言识别结论；外语目标仍允许翻译中文。
+ */
+export function shouldSkipChineseSelection(origin: string, targetLanguage: string): boolean {
+    if (!getChineseScript(targetLanguage)) return false;
+    return /\p{Script=Han}/u.test(origin)
+        && !/\p{L}/u.test(origin.replace(/\p{Script=Han}/gu, ''));
+}
