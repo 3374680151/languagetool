@@ -41,13 +41,28 @@ h1{font-size:18px;margin:0;font-weight:600;letter-spacing:.2px}
 .dot.ok{background:#22c55e}.dot.bad{background:var(--red)}
 .card{background:var(--card);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow)}
 .layout{display:grid;grid-template-columns:minmax(0,1fr) 396px;gap:14px;align-items:start}
-@media (max-width:1120px){.layout{grid-template-columns:1fr}}
 .col-main{min-width:0;display:grid;gap:12px}
+.col-side{min-width:0}
+@media (max-width:1120px){
+  /* 窄屏单列：编辑器 → 审阅面板 → 折叠工具区（display:contents 提升子项参与排序） */
+  .layout{display:flex;flex-direction:column;align-items:stretch}
+  .col-main{display:contents}
+  .col-main>div.card{order:1}
+  .col-side{order:2}
+  .col-main>details.sec{order:3}
+  .panel{position:static;max-height:none}
+}
 .toolbar{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:11px 13px;border-bottom:1px solid var(--border)}
 label.f{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
 select,input[type=text],input[type=number],textarea.ta{font:inherit;font-size:13.5px;color:var(--fg);background:var(--bg);
   border:1px solid var(--border);border-radius:8px;padding:6px 9px;outline:none}
 select:focus,input[type=text]:focus,input[type=number]:focus{border-color:var(--accent)}
+select:focus-visible,input[type=text]:focus-visible,input[type=number]:focus-visible,textarea.ta:focus-visible{box-shadow:0 0 0 3px var(--accent-soft)}
+.switch input:focus-visible + i{box-shadow:0 0 0 3px var(--accent-soft)}
+.btn:focus-visible,.tab:focus-visible,.seg-btn:focus-visible,.fix:focus-visible,.chip button:focus-visible,
+.bank-del:focus-visible,.selbar button:focus-visible,.count-badge:focus-visible,.bank-btn:focus-visible,
+.fc-saved button:focus-visible,.rulerow button:focus-visible,details.sec>summary:focus-visible,
+details.raw summary:focus-visible,.badge:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .switch{position:relative;width:36px;height:20px;flex:none;cursor:pointer}
 .switch input{opacity:0;width:100%;height:100%;position:absolute;margin:0;cursor:pointer}
 .switch i{position:absolute;inset:0;background:var(--border);border-radius:99px;transition:.15s;pointer-events:none}
@@ -89,7 +104,6 @@ details.raw pre{max-height:320px;overflow:auto;background:var(--bg);border:1px s
   border-radius:8px;padding:10px;font-size:11.5px;line-height:1.5;margin:8px 0 0}
 /* 侧栏问题面板 */
 .panel{position:sticky;top:14px;display:flex;flex-direction:column;max-height:calc(100vh - 28px);overflow:hidden}
-@media (max-width:1120px){.panel{position:static;max-height:none}}
 .panel-head{display:flex;align-items:center;gap:8px;padding:11px 14px 9px;font-size:14px;font-weight:600}
 .panel-head .cnt{font-size:12.5px;font-weight:500;color:var(--muted)}
 .tabs{display:flex;gap:5px;flex-wrap:wrap;padding:0 12px 10px}
@@ -279,6 +293,16 @@ details.sec>summary .n{font-size:11.5px;background:var(--accent-soft);color:var(
 .bank-btn.flash{animation:badgeflash .6s ease-out 2}
 footer{margin-top:20px;color:var(--muted);font-size:12px;line-height:1.75}
 footer code{background:var(--card);border:1px solid var(--border);border-radius:5px;padding:1px 5px;font-size:11.5px}
+/* 触屏设备：放大点击热区（≥32px 视觉高度），只影响触屏，不改变桌面布局 */
+@media (pointer:coarse){
+  .btn,.btn.mini,.match .acts .btn,.fc-foot .btn{padding:8px 14px;font-size:13px}
+  .btn.icon{padding:8px 11px}
+  .tab,.seg-btn{padding:7px 13px}
+  .fix{padding:7px 13px}
+  .fc-saved button,.deferred button,.rulerow button{padding:6px 11px}
+  .bank-del{padding:8px 10px}
+  .chip button{padding:4px 2px}
+}
 </style>
 </head>
 <body>
@@ -1553,7 +1577,13 @@ ta.addEventListener("input", () => {
   hideSelBar();
   saveDraft(); scheduleCheck();
 });
-ta.addEventListener("scroll", () => { backdrop.scrollTop = ta.scrollTop; hideSelBar(); });
+ta.addEventListener("scroll", () => {
+  backdrop.scrollTop = ta.scrollTop; hideSelBar();
+  if($("fixcard").classList.contains("open")) positionFix();
+});
+window.addEventListener("resize", () => {
+  if($("fixcard").classList.contains("open")) positionFix();
+});
 $("checkNow").addEventListener("click", check);
 ["lang","level","auto","motherTongue","preferredVariants","mode","enabledOnly","enabledRules","chunkSize","skipCode"]
   .forEach(id => $(id).addEventListener("change", () => {
