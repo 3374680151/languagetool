@@ -3,47 +3,51 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>LanguageTool 网页校对编辑器</title>
+<title>LanguageTool 校对工作台</title>
 <style>
 :root{
-  --bg:#f5f6fa; --card:#ffffff; --fg:#1b1e2b; --muted:#6b7280; --border:#e3e6ee;
+  --bg:#f4f5fa; --card:#ffffff; --fg:#171a26; --muted:#6b7280; --border:#e3e6ee;
   --accent:#4f46e5; --accent-soft:#eef0fe; --accent-fg:#ffffff;
-  --red:#dc2626; --orange:#d97706; --purple:#7c3aed; --blue:#2563eb; --gray:#64748b;
+  --red:#dc2626; --orange:#d97706; --purple:#7c3aed; --blue:#2563eb; --gray:#64748b; --green:#16a34a;
   --shadow:0 1px 3px rgba(16,20,40,.06),0 8px 24px rgba(16,20,40,.05);
 }
 :root[data-theme="dark"]{
   --bg:#13151d; --card:#1c1f2a; --fg:#e9ebf3; --muted:#9aa2b4; --border:#2b2f3d;
   --accent:#818cf8; --accent-soft:#252840; --accent-fg:#101322;
-  --red:#f87171; --orange:#fbbf24; --purple:#c4b5fd; --blue:#60a5fa; --gray:#94a3b8;
+  --red:#f87171; --orange:#fbbf24; --purple:#c4b5fd; --blue:#60a5fa; --gray:#94a3b8; --green:#4ade80;
   --shadow:0 1px 3px rgba(0,0,0,.4);
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --bg:#13151d; --card:#1c1f2a; --fg:#e9ebf3; --muted:#9aa2b4; --border:#2b2f3d;
     --accent:#818cf8; --accent-soft:#252840; --accent-fg:#101322;
-    --red:#f87171; --orange:#fbbf24; --purple:#c4b5fd; --blue:#60a5fa; --gray:#94a3b8;
+    --red:#f87171; --orange:#fbbf24; --purple:#c4b5fd; --blue:#60a5fa; --gray:#94a3b8; --green:#4ade80;
     --shadow:0 1px 3px rgba(0,0,0,.4);
   }
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--fg);
   font:15px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;}
-.wrap{max-width:960px;margin:0 auto;padding:24px 16px 60px}
-header{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.wrap{max-width:1280px;margin:0 auto;padding:20px 18px 56px}
+header{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
 .logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#6366f1,#a855f7);
   display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:15px;flex:none}
-h1{font-size:19px;margin:0;font-weight:600}
+h1{font-size:18px;margin:0;font-weight:600;letter-spacing:.2px}
 .sub{color:var(--muted);font-size:12.5px;margin-top:1px}
-.status{margin-left:auto;display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted);
+.hright{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.status{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted);
   background:var(--card);border:1px solid var(--border);border-radius:99px;padding:5px 12px}
 .dot{width:8px;height:8px;border-radius:99px;background:var(--gray);flex:none}
 .dot.ok{background:#22c55e}.dot.bad{background:var(--red)}
 .card{background:var(--card);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow)}
-.toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 14px;border-bottom:1px solid var(--border)}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 396px;gap:14px;align-items:start}
+@media (max-width:1120px){.layout{grid-template-columns:1fr}}
+.col-main{min-width:0;display:grid;gap:12px}
+.toolbar{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:11px 13px;border-bottom:1px solid var(--border)}
 label.f{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
-select,input[type=text]{font:inherit;font-size:13.5px;color:var(--fg);background:var(--bg);
+select,input[type=text],input[type=number],textarea.ta{font:inherit;font-size:13.5px;color:var(--fg);background:var(--bg);
   border:1px solid var(--border);border-radius:8px;padding:6px 9px;outline:none}
-select:focus,input[type=text]:focus{border-color:var(--accent)}
+select:focus,input[type=text]:focus,input[type=number]:focus{border-color:var(--accent)}
 .switch{position:relative;width:36px;height:20px;flex:none;cursor:pointer}
 .switch input{opacity:0;width:100%;height:100%;position:absolute;margin:0;cursor:pointer}
 .switch i{position:absolute;inset:0;background:var(--border);border-radius:99px;transition:.15s;pointer-events:none}
@@ -51,302 +55,792 @@ select:focus,input[type=text]:focus{border-color:var(--accent)}
 .switch input:checked + i{background:var(--accent)}
 .switch input:checked + i::after{transform:translateX(16px)}
 .btn{font:inherit;font-size:13.5px;color:var(--fg);background:var(--card);border:1px solid var(--border);
-  border-radius:8px;padding:6px 13px;cursor:pointer}
+  border-radius:8px;padding:6px 12px;cursor:pointer;white-space:nowrap}
 .btn:hover{border-color:var(--accent);color:var(--accent)}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg);font-weight:500}
 .btn.primary:hover{opacity:.9;color:var(--accent-fg)}
 .btn.mini{font-size:12.5px;padding:3px 10px;border-radius:99px}
-/* 编辑器：textarea 叠加高亮层 */
+.btn.icon{padding:5px 9px;line-height:1}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+/* 编辑器 */
 .editor-wrap{position:relative}
+.editor-wrap.drag::after{content:"松开以导入文本文件";position:absolute;inset:0;z-index:12;border-radius:0 0 13px 13px;
+  background:rgba(79,70,229,.10);border:2px dashed var(--accent);display:flex;align-items:center;justify-content:center;
+  font-size:13px;color:var(--accent);pointer-events:none}
 .backdrop{position:absolute;inset:0;overflow:hidden;pointer-events:none;border-radius:0 0 13px 13px}
 .backdrop .hl-layer,#input{
   font:15px/1.8 "SF Mono",ui-monospace,Menlo,Consolas,"PingFang SC","Microsoft YaHei",monospace;
   padding:16px 18px;white-space:pre-wrap;word-break:break-word;overflow-wrap:break-word;letter-spacing:0}
-#input{display:block;width:100%;min-height:280px;max-height:520px;resize:vertical;
+#input{display:block;width:100%;height:clamp(240px,40vh,520px);min-height:210px;resize:vertical;
   border:0;outline:0;background:transparent;color:transparent;caret-color:var(--accent)}
 #input::selection{background:rgba(99,102,241,.25)}
 .backdrop .hl-layer{min-height:100%}
-mark.hl{background:transparent;border-radius:3px;padding:1px 0;border-bottom:2.5px solid var(--gray);box-decoration-break:clone}
-mark.hl.typo{border-color:var(--red);background:rgba(220,38,38,.08)}
-mark.hl.grammar{border-color:var(--orange);background:rgba(217,119,6,.08)}
-mark.hl.style{border-color:var(--purple);background:rgba(124,58,237,.08)}
-mark.hl.punct{border-color:var(--blue);background:rgba(37,99,235,.08)}
-.stats{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:10px 16px;border-top:1px solid var(--border);
+mark.hl{background:transparent;border-radius:3px;padding:1px 0;border-bottom:2.5px solid var(--gray);box-decoration-break:clone;cursor:pointer}
+mark.hl.typo{border-color:var(--red);background:rgba(220,38,38,.09)}
+mark.hl.grammar{border-color:var(--orange);background:rgba(217,119,6,.09)}
+mark.hl.style{border-color:var(--purple);background:rgba(124,58,237,.09)}
+mark.hl.punct{border-color:var(--blue);background:rgba(37,99,235,.09)}
+.stats{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:9px 14px;border-top:1px solid var(--border);
   font-size:12.5px;color:var(--muted)}
-.stats b{color:var(--fg);font-weight:600}
+.stats b{color:var(--fg);font-weight:600;font-variant-numeric:tabular-nums}
+.stats .sep{width:1px;height:14px;background:var(--border)}
 details.raw summary{cursor:pointer;font-size:12.5px;color:var(--muted)}
-details.raw pre{max-height:300px;overflow:auto;background:var(--bg);border:1px solid var(--border);
-  border-radius:8px;padding:10px;font-size:11.5px;line-height:1.5}
-/* 错误卡片 */
-.results{margin-top:16px}
-.results h2{font-size:14.5px;margin:0 0 10px;font-weight:600}
-.match{padding:13px 15px;margin-bottom:10px;border-left:3px solid var(--gray)}
+details.raw pre{max-height:320px;overflow:auto;background:var(--bg);border:1px solid var(--border);
+  border-radius:8px;padding:10px;font-size:11.5px;line-height:1.5;margin:8px 0 0}
+/* 侧栏问题面板 */
+.panel{position:sticky;top:14px;display:flex;flex-direction:column;max-height:calc(100vh - 28px);overflow:hidden}
+@media (max-width:1120px){.panel{position:static;max-height:none}}
+.panel-head{display:flex;align-items:center;gap:8px;padding:11px 14px 9px;font-size:14px;font-weight:600}
+.panel-head .cnt{font-size:12.5px;font-weight:500;color:var(--muted)}
+.tabs{display:flex;gap:5px;flex-wrap:wrap;padding:0 12px 10px}
+.tab{font:inherit;font-size:12px;color:var(--muted);background:var(--bg);border:1px solid var(--border);
+  border-radius:99px;padding:3px 9px;cursor:pointer;display:inline-flex;align-items:center;gap:4px}
+.tab b{font-weight:600;font-variant-numeric:tabular-nums}
+.tab.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.tab.t-typo.on{background:rgba(220,38,38,.10);border-color:var(--red);color:var(--red)}
+.tab.t-grammar.on{background:rgba(217,119,6,.10);border-color:var(--orange);color:var(--orange)}
+.tab.t-punct.on{background:rgba(37,99,235,.10);border-color:var(--blue);color:var(--blue)}
+.tab.t-style.on{background:rgba(124,58,237,.10);border-color:var(--purple);color:var(--purple)}
+.dist{display:flex;height:4px;margin:0 14px 10px;border-radius:99px;overflow:hidden;background:var(--border)}
+.dist i{display:block;height:100%}
+.dist i.typo{background:var(--red)}.dist i.grammar{background:var(--orange)}
+.dist i.punct{background:var(--blue)}.dist i.style{background:var(--purple)}.dist i.other{background:var(--gray)}
+.list{overflow:auto;padding:0 12px 12px;flex:1;min-height:0}
+.match{padding:10px 12px;margin-bottom:8px;border:1px solid var(--border);border-left:3px solid var(--gray);
+  border-radius:9px;background:var(--card);cursor:pointer;transition:border-color .12s,box-shadow .12s}
+.match:hover{border-color:var(--accent);box-shadow:0 2px 10px rgba(16,20,40,.07)}
 .match.typo{border-left-color:var(--red)}.match.grammar{border-left-color:var(--orange)}
 .match.style{border-left-color:var(--purple)}.match.punct{border-left-color:var(--blue)}
-.ctx{font-size:13.5px;color:var(--muted);margin-bottom:5px;word-break:break-all}
-.ctx b{color:var(--fg);background:rgba(99,102,241,.12);border-radius:3px;padding:1px 3px;font-weight:600}
-.msg{font-size:13.5px;margin-bottom:9px}
-.row{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
-.badge{font-size:11px;color:var(--muted);background:var(--bg);border:1px solid var(--border);border-radius:99px;padding:2px 9px}
-.fix{font:inherit;font-size:12.5px;color:var(--accent);background:var(--accent-soft);
-  border:1px solid transparent;border-radius:99px;padding:3px 12px;cursor:pointer}
+.match.active{box-shadow:0 0 0 2px var(--accent-soft),0 2px 12px rgba(16,20,40,.10)}
+.ctx{font-size:12.5px;color:var(--muted);margin-bottom:4px;word-break:break-word;line-height:1.55}
+.ctx b{color:var(--fg);background:rgba(99,102,241,.13);border-radius:3px;padding:1px 3px;font-weight:600}
+.msg{font-size:13px;margin-bottom:7px;line-height:1.5}
+.row{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.badge{font-size:10px;color:var(--muted);background:var(--bg);border:1px solid var(--border);border-radius:99px;
+  padding:1px 7px;white-space:nowrap}
+.fix{font:inherit;font-size:12px;color:var(--accent);background:var(--accent-soft);
+  border:1px solid transparent;border-radius:99px;padding:2px 10px;cursor:pointer;max-width:150px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fix:hover{border-color:var(--accent)}
-.ignore{margin-left:auto}
-.hint{color:var(--muted);font-size:13px;padding:14px 2px}
-/* 高级设置 */
-details.adv{margin-top:16px;border:1px solid var(--border);border-radius:12px;background:var(--card)}
-details.adv summary{cursor:pointer;padding:12px 16px;font-size:13.5px;font-weight:500;color:var(--muted)}
-.adv-body{padding:2px 16px 16px;display:grid;gap:12px}
+.match .acts{justify-content:flex-end;margin-top:6px;gap:4px}
+.match .acts .btn{font-size:11.5px;padding:2px 9px}
+.hint{color:var(--muted);font-size:12.5px;padding:16px 4px;text-align:center;line-height:1.7}
+.hint.ok{color:var(--green)}
+/* 就地纠错卡（锚定在被标红的词旁边） */
+.fixcard{position:absolute;z-index:14;width:372px;max-width:calc(100% - 16px);display:none;
+  background:var(--card);border:1px solid var(--border);border-radius:12px;padding:10px 12px;
+  box-shadow:0 10px 34px rgba(8,12,36,.22)}
+.fixcard.open{display:block;animation:fc .12s ease-out}
+@keyframes fc{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.fc-head{display:flex;align-items:center;gap:6px;margin-bottom:7px;font-size:11.5px;color:var(--muted)}
+.fc-type{font-size:11px;font-weight:600;border-radius:99px;padding:1px 8px;background:var(--accent-soft);color:var(--accent);flex:none}
+.fc-type.typo{background:rgba(220,38,38,.12);color:var(--red)}
+.fc-type.grammar{background:rgba(217,119,6,.13);color:var(--orange)}
+.fc-type.punct{background:rgba(37,99,235,.12);color:var(--blue)}
+.fc-type.style{background:rgba(124,58,237,.12);color:var(--purple)}
+.fc-rule{font-family:ui-monospace,Menlo,monospace;font-size:10.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fc-pos{margin-left:auto;font-variant-numeric:tabular-nums;flex:none}
+.fc-ctx{font-size:12.5px;color:var(--muted);line-height:1.55;margin-bottom:6px;max-height:58px;overflow:hidden}
+.fc-ctx b{color:var(--fg);background:rgba(99,102,241,.14);border-radius:3px;padding:1px 3px;font-weight:600}
+.fc-msg{font-size:13px;line-height:1.5;margin-bottom:9px}
+.fc-reps{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}
+.fc-reps .fix{font-size:12.5px;padding:3px 11px}
+.fc-reps .fix.rec,.match .fix.rec{background:var(--accent);color:var(--accent-fg);border-color:var(--accent);font-weight:500}
+.fc-desc{font-size:11.5px;color:var(--muted);border-top:1px dashed var(--border);padding-top:6px;margin-bottom:8px;line-height:1.5}
+.fc-foot{display:flex;align-items:center;gap:5px}
+.fc-foot .btn{font-size:11.5px;padding:2px 9px;border-radius:99px}
+.fc-foot .kbdhint{margin-left:auto;font-size:11px;color:var(--muted)}
+.fc-foot .btn[disabled]{opacity:.6;cursor:default;color:var(--green);border-color:var(--green)}
+.fc-saved{display:flex;align-items:center;gap:6px;margin-top:8px;padding-top:8px;
+  border-top:1px dashed var(--border);font-size:11.5px;color:var(--green)}
+.fc-saved[hidden]{display:none}
+.fc-saved input{flex:1;min-width:0;font:inherit;font-size:11.5px;background:var(--bg);
+  border:1px solid var(--border);border-radius:6px;padding:3px 7px;color:var(--fg)}
+.fc-saved input:focus{outline:none;border-color:var(--accent)}
+.fc-saved button{font:inherit;font-size:11px;padding:2px 8px;border-radius:99px;
+  border:1px solid var(--border);background:var(--card);color:var(--accent);cursor:pointer;white-space:nowrap}
+/* 面板分段视图 / 词库 / 选区浮条 */
+.seg{display:inline-flex;background:var(--bg);border:1px solid var(--border);border-radius:99px;padding:2px}
+.seg-btn{font:inherit;font-size:12px;border:0;background:none;color:var(--muted);padding:3px 10px;
+  border-radius:99px;cursor:pointer;display:inline-flex;align-items:center;gap:4px}
+.seg-btn b{font-weight:600;font-variant-numeric:tabular-nums}
+.seg-btn.on{background:var(--card);color:var(--fg);font-weight:600;box-shadow:0 1px 3px rgba(16,20,40,.16)}
+.seg-btn.on b{color:var(--accent)}
+.view{display:flex;flex-direction:column;flex:1;min-height:0}
+.view[hidden]{display:none}
+.bank-bar{display:flex;align-items:center;gap:8px;padding:0 12px 7px}
+.bank-bar input[type=text]{flex:1;min-width:0;font-size:12.5px}
+.bank-wl{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--muted);padding:0 12px 8px;cursor:pointer}
+.bank-list{overflow:auto;padding:0 12px;flex:1;min-height:0}
+.bankrow{display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px dashed var(--border)}
+.bankrow .bw{font-size:13px;font-weight:600;flex:none;max-width:118px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bankrow .bank-note{flex:1;min-width:0;font:inherit;font-size:11.5px;background:transparent;border:1px solid transparent;
+  border-radius:6px;padding:2px 5px;color:var(--muted)}
+.bankrow .bank-note:hover{border-color:var(--border)}
+.bankrow .bank-note:focus{background:var(--bg);border-color:var(--accent);color:var(--fg);outline:none}
+.bank-del{border:0;background:none;color:var(--muted);cursor:pointer;font-size:12px;padding:2px 4px;flex:none}
+.bank-del:hover{color:var(--red)}
+.bank-foot{display:flex;gap:6px;padding:8px 12px;border-top:1px solid var(--border);align-items:center}
+.selbar{position:absolute;z-index:13;display:none;gap:2px;background:var(--card);border:1px solid var(--border);
+  border-radius:99px;padding:3px;box-shadow:0 6px 20px rgba(8,12,36,.22)}
+.selbar.open{display:flex}
+.selbar button{font:inherit;font-size:11.5px;border:0;background:none;color:var(--accent);
+  padding:3px 10px;border-radius:99px;cursor:pointer;white-space:nowrap}
+.selbar button:hover{background:var(--accent-soft)}
+.count-badge.flash{animation:badgeflash .6s ease-out 2}
+@keyframes badgeflash{0%,100%{transform:none}40%{transform:scale(1.12)}}
+/* 审阅进度 / 暂缓区 */
+.progress{height:3px;margin:0 14px 9px;background:var(--border);border-radius:99px;overflow:hidden}
+.progress i{display:block;height:100%;width:0;background:var(--green);transition:width .25s}
+.deferred{display:flex;align-items:center;gap:6px;margin:0 14px 9px;padding:5px 9px;border-radius:8px;
+  background:var(--bg);border:1px dashed var(--border);font-size:11.5px;color:var(--muted)}
+.deferred[hidden]{display:none}
+.deferred button{margin-left:auto;font-size:11px;padding:1px 8px;border-radius:99px;border:1px solid var(--border);
+  background:var(--card);color:var(--accent);cursor:pointer}
+.count-badge{display:inline-flex;align-items:center;gap:5px;font:inherit;font-size:12.5px;font-weight:600;
+  color:#fff;background:#dc2626;border:0;border-radius:99px;padding:4px 11px;cursor:pointer;white-space:nowrap}
+.count-badge.ok{background:#16a34a}
+.count-badge.warn{background:#d97706;animation:pulse 1.2s ease-in-out infinite}
+.count-badge[hidden]{display:none}
+/* 折叠区 */
+details.sec{padding:0}
+details.sec>summary{cursor:pointer;padding:11px 15px;font-size:13.5px;font-weight:500;color:var(--muted);
+  list-style:none;display:flex;align-items:center;gap:8px}
+details.sec>summary::-webkit-details-marker{display:none}
+details.sec>summary::before{content:"›";font-size:16px;transition:transform .15s;display:inline-block;color:var(--muted)}
+details.sec[open]>summary::before{transform:rotate(90deg)}
+details.sec>summary .n{font-size:11.5px;background:var(--accent-soft);color:var(--accent);border-radius:99px;padding:1px 8px}
+.sec-body{padding:0 15px 15px}
+.adv-body{display:grid;gap:11px}
 .adv-row{display:grid;gap:4px}
-.adv-row .f{font-size:12.5px;color:var(--muted)}
-.adv-row input[type=text],.adv-row select{width:100%;max-width:480px}
+.adv-row>.f{font-size:12.5px;color:var(--muted)}
+.adv-row input[type=text],.adv-row select,.adv-row input[type=number]{width:100%;max-width:460px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:720px){.grid2{grid-template-columns:1fr}}
 .chips{display:flex;gap:6px;flex-wrap:wrap}
 .chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;background:var(--accent-soft);
-  color:var(--accent);border-radius:99px;padding:3px 10px}
-.chip button{border:0;background:none;color:inherit;cursor:pointer;font-size:13px;padding:0;line-height:1}
+  color:var(--accent);border-radius:99px;padding:2px 9px}
+.chip button{border:0;background:none;color:inherit;cursor:pointer;font-size:12px;padding:0;line-height:1}
+/* 分类/规则选择 */
+.catpick{display:grid;grid-template-columns:1fr 1fr;gap:5px 12px;
+  border:1px solid var(--border);border-radius:9px;padding:9px 11px;background:var(--bg)}
+@media (max-width:720px){.catpick{grid-template-columns:1fr}}
+.catpick label{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--fg);cursor:pointer}
+.catpick label span.muted{margin-left:auto;color:var(--muted);font-size:11px}
+.rulelist{max-height:340px;overflow:auto;border:1px solid var(--border);border-radius:9px}
+.rulerow{display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid var(--border);font-size:12.5px}
+.rulerow:last-child{border-bottom:0}
+.rulerow:hover{background:var(--bg)}
+.rulerow .rid{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:var(--accent);flex:none}
+.rulerow .desc{color:var(--fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
+.rulerow .cat{font-size:10.5px;color:var(--muted);flex:none}
+.rulerow .acts{display:flex;gap:4px;flex:none}
+.rulerow button{font-size:11px;padding:1px 7px;border-radius:99px;border:1px solid var(--border);
+  background:var(--card);color:var(--muted);cursor:pointer}
+.rulerow button:hover{border-color:var(--accent);color:var(--accent)}
+/* 改动记录 */
+.chg{display:flex;align-items:center;gap:8px;font-size:12.5px;padding:6px 0;border-bottom:1px dashed var(--border)}
+.chg:last-child{border-bottom:0}
+.chg .from{color:var(--red);text-decoration:line-through;opacity:.85}
+.chg .to{color:var(--green);font-weight:600}
+.chg .rule{color:var(--muted);font-size:11px;margin-left:auto;flex:none}
+/* 提示条 / 弹窗 */
 .banner{display:none;margin:0 0 12px;padding:10px 14px;border-radius:10px;font-size:13px;
   background:rgba(220,38,38,.08);border:1px solid var(--red);color:var(--red)}
 .banner.show{display:block}
+.banner.info{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
 .spin{display:inline-block;width:12px;height:12px;border:2px solid var(--border);border-top-color:var(--accent);
   border-radius:99px;animation:r .7s linear infinite;vertical-align:-1px}
 @keyframes r{to{transform:rotate(360deg)}}
-/* 悬浮圆点 + 纠错浮层（仿官方浏览器插件交互） */
-.lt-dot{position:absolute;right:14px;bottom:12px;z-index:6;width:30px;height:30px;border-radius:99px;
-  border:2px solid var(--card);box-shadow:0 2px 10px rgba(0,0,0,.3);cursor:pointer;padding:0;
-  display:flex;align-items:center;justify-content:center;font:600 12.5px/1 inherit;font-family:inherit;color:#fff;
-  transition:transform .12s}
-.lt-dot:hover{transform:scale(1.1)}
-.lt-dot.err{background:var(--red)}.lt-dot.ok{background:#22c55e}.lt-dot.warn{background:var(--orange)}
-.lt-dot.pulse{animation:pulse 1s ease-in-out infinite}
-@keyframes pulse{50%{opacity:.55}}
-.lt-pop{position:absolute;right:12px;bottom:52px;z-index:9;width:360px;max-width:calc(100% - 24px);
-  background:var(--card);border:1px solid var(--border);border-radius:14px;
-  box-shadow:0 12px 40px rgba(8,12,36,.28);display:none;overflow:hidden}
-.lt-pop.open{display:block;animation:pop .15s ease-out}
-@keyframes pop{from{opacity:0;transform:translateY(8px)}to{opacity:1}}
-.pop-head{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px;font-weight:600}
-.pop-head .cnt{color:var(--red);font-weight:500}
-.pop-body{padding:12px 14px;max-height:300px;overflow:auto}
-.pop-nav{display:flex;align-items:center;gap:8px;padding:9px 12px;border-top:1px solid var(--border);
-  font-size:12.5px;color:var(--muted)}
-.pop-nav .btn{white-space:nowrap}
-.pop-nav .pos{min-width:52px;text-align:center;font-variant-numeric:tabular-nums}
-footer{margin-top:22px;color:var(--muted);font-size:12px;line-height:1.7}
+.modal{position:fixed;inset:0;z-index:40;background:rgba(10,12,24,.45);display:none;align-items:center;justify-content:center;padding:20px}
+.modal.open{display:flex}
+.modal .box{background:var(--card);border:1px solid var(--border);border-radius:14px;max-width:620px;width:100%;
+  max-height:80vh;overflow:auto;box-shadow:0 20px 60px rgba(8,12,36,.35)}
+.modal h3{margin:0;padding:13px 16px;border-bottom:1px solid var(--border);font-size:14.5px;display:flex;align-items:center;gap:8px}
+.modal .mbody{padding:14px 16px;font-size:13px;line-height:1.75}
+.modal .mbody h4{margin:14px 0 6px;font-size:13px;color:var(--muted);font-weight:600}
+.modal .mbody h4:first-child{margin-top:0}
+.modal kbd{font:11.5px/1.4 ui-monospace,Menlo,monospace;background:var(--bg);border:1px solid var(--border);
+  border-bottom-width:2px;border-radius:5px;padding:1px 5px}
+.modal .kv{display:grid;grid-template-columns:110px 1fr;gap:4px 10px;font-size:12.5px}
+.modal .kv div:nth-child(odd){color:var(--muted)}
+.toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,12px);z-index:60;background:#111827;color:#fff;
+  font-size:13px;padding:9px 16px;border-radius:99px;opacity:0;pointer-events:none;transition:.2s;
+  display:flex;align-items:center;gap:10px;max-width:92vw}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.toast.has-act{pointer-events:auto}
+.toast button{font:inherit;font-size:12px;background:rgba(255,255,255,.18);color:#fff;border:0;
+  border-radius:99px;padding:3px 11px;cursor:pointer;white-space:nowrap}
+.toast button:hover{background:rgba(255,255,255,.32)}
+.bank-btn{display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:12.5px;color:var(--fg);
+  background:var(--card);border:1px solid var(--border);border-radius:99px;padding:4px 12px;cursor:pointer;white-space:nowrap}
+.bank-btn:hover{border-color:var(--accent);color:var(--accent)}
+.bank-btn b{font-variant-numeric:tabular-nums;color:var(--accent)}
+.bank-btn.flash{animation:badgeflash .6s ease-out 2}
+footer{margin-top:20px;color:var(--muted);font-size:12px;line-height:1.75}
+footer code{background:var(--card);border:1px solid var(--border);border-radius:5px;padding:1px 5px;font-size:11.5px}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
     <div class="logo">LT</div>
-    <div><h1>LanguageTool 网页校对</h1><div class="sub">拼写 · 语法 · 标点 · 风格 · 多语言自动检测</div></div>
-    <div class="status"><span class="dot" id="statusDot"></span><span id="statusText">连接中…</span></div>
-    <select id="theme" aria-label="主题">
-      <option value="auto">主题：跟随系统</option>
-      <option value="light">浅色</option>
-      <option value="dark">深色</option>
-    </select>
+    <div>
+      <h1>LanguageTool 校对工作台</h1>
+      <div class="sub">拼写 · 语法 · 标点 · 风格 · 长文分段 · 多语言检测</div>
+    </div>
+    <div class="hright">
+      <button class="bank-btn" id="bankBtn" type="button" title="我的词库：收藏过的词都在这里">我的词库 <b id="bankBtnCnt">0</b></button>
+      <button class="count-badge" id="countBadge" type="button" hidden title="点这里从第一个问题开始逐个改">0</button>
+      <div class="status"><span class="dot" id="statusDot"></span><span id="statusText">连接中…</span></div>
+      <select id="theme" aria-label="主题" style="max-width:150px">
+        <option value="auto">跟随系统</option>
+        <option value="light">浅色</option>
+        <option value="dark">深色</option>
+      </select>
+      <button class="btn icon" id="helpBtn" title="快捷键与说明">?</button>
+    </div>
   </header>
 
   <div class="banner" id="banner"></div>
 
-  <div class="card">
-    <div class="toolbar">
-      <label class="f">语言
-        <select id="lang" style="max-width:230px"><option value="en-US">English (US)</option></select>
-      </label>
-      <label class="f"><span class="switch"><input type="checkbox" id="auto"><i></i></span>自动检测</label>
-      <label class="f">检查级别
-        <select id="level">
-          <option value="default">标准</option>
-          <option value="picky">严格（含风格）</option>
-          <option value="academic">学术</option>
-        </select>
-      </label>
-      <span style="flex:1"></span>
-      <button class="btn" id="sampleEn" type="button">英文示例</button>
-      <button class="btn" id="sampleZh" type="button">中文示例</button>
-      <button class="btn primary" id="checkNow" type="button">立即检查</button>
-    </div>
-
-    <div class="editor-wrap">
-      <div class="backdrop"><div class="hl-layer" id="hl"></div></div>
-      <textarea id="input" spellcheck="false" placeholder="在此输入要校对的文本…"></textarea>
-      <div class="lt-pop" id="pop" role="dialog" aria-label="纠错助手">
-        <div class="pop-head">纠错助手 <span class="cnt" id="popCnt"></span><span style="flex:1"></span>
-          <button class="btn mini" id="popFixAll" type="button">全部修正</button>
-          <button class="btn mini" id="popClose" type="button" aria-label="关闭">✕</button>
-        </div>
-        <div class="pop-body" id="popBody"></div>
-        <div class="pop-nav">
-          <button class="btn mini" id="popPrev" type="button">‹ 上一个</button>
-          <span class="pos" id="popPos">0 / 0</span>
-          <button class="btn mini" id="popNext" type="button">下一个 ›</button>
+  <div class="layout">
+    <!-- 左：编辑区 -->
+    <div class="col-main">
+      <div class="card">
+        <div class="toolbar">
+          <label class="f">语言
+            <select id="lang" style="max-width:200px"><option value="en-US">English (US)</option></select>
+          </label>
+          <label class="f"><span class="switch"><input type="checkbox" id="auto"><i></i></span>自动检测</label>
+          <label class="f">级别
+            <select id="level">
+              <option value="default">标准</option>
+              <option value="picky">严格（含风格）</option>
+              <option value="academic">学术</option>
+            </select>
+          </label>
           <span style="flex:1"></span>
-          <span class="text-small" style="color:var(--muted)">点正文下划线可直接定位</span>
+          <button class="btn" id="importBtn" type="button" title="导入 .txt / .md 文件，或直接拖进编辑区">导入</button>
+          <input type="file" id="fileInput" accept=".txt,.md,.markdown,.csv,.srt,.log,.html,.htm,text/*" hidden>
+          <select id="sampleSel" aria-label="载入示例" style="max-width:104px">
+            <option value="">示例…</option>
+            <option value="en">英文示例</option>
+            <option value="zh">中文示例</option>
+          </select>
+          <button class="btn" id="checkNow" type="button" title="输入时会自动检查，这里只是手动重查一次">重查 ⌘↵</button>
+        </div>
+
+        <div class="editor-wrap" id="dropZone">
+          <div class="backdrop"><div class="hl-layer" id="hl"></div></div>
+          <textarea id="input" spellcheck="false" placeholder="在此输入或粘贴文本…（支持拖入 .txt / .md 文件，草稿自动保存）"></textarea>
+          <div class="selbar" id="selbar">
+            <button id="selFav" type="button">＋ 收藏</button>
+          </div>
+          <div class="fixcard" id="fixcard" role="dialog" aria-label="就地纠错">
+            <div class="fc-head">
+              <span class="fc-type" id="fcType">拼写</span>
+              <span class="fc-rule" id="fcRule"></span>
+              <span class="fc-pos" id="fcPos"></span>
+            </div>
+            <div class="fc-ctx" id="fcCtx"></div>
+            <div class="fc-msg" id="fcMsg"></div>
+            <div class="fc-reps" id="fcReps"></div>
+            <div class="fc-desc" id="fcDesc"></div>
+            <div class="fc-foot">
+              <button class="btn" id="fcPrev" type="button" title="上一个问题 (⌥←)">‹</button>
+              <button class="btn" id="fcNext" type="button" title="下一个问题 (⌥→)">›</button>
+              <button class="btn" id="fcOnce" type="button" title="这条先跳过，不会写入忽略列表">跳过</button>
+              <button class="btn" id="fcFav" type="button" title="收藏到我的词库，同时不再报拼写错误">收藏</button>
+              <button class="btn" id="fcIgnore" type="button" title="以后这类问题都不再提示">永久忽略</button>
+              <span class="kbdhint" id="fcHint"></span>
+            </div>
+            <div class="fc-saved" id="fcSaved" hidden>
+              <span>✓ 已加入词库</span>
+              <input type="text" id="fcNote" placeholder="写个备注：释义 / 例句">
+              <button type="button" id="fcOpenBank">词库</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="stats">
+          <span>字符 <b id="stChars">0</b></span>
+          <span>词 <b id="stWords">0</b></span>
+          <span>句 <b id="stSent">0</b></span>
+          <span class="sep"></span>
+          <span>问题 <b id="stMatches">0</b></span>
+          <span>耗时 <b id="stTime">–</b></span>
+          <span id="stDetect" style="display:none">检测 <b id="stDetectName"></b></span>
+          <span id="stChunk" style="display:none">分段 <b id="stChunkN"></b></span>
+          <span style="flex:1"></span>
+          <button class="btn mini" id="copyBtn" type="button" title="复制当前（含修正）全文">复制</button>
+          <button class="btn mini" id="downloadBtn" type="button">下载 .txt</button>
+          <button class="btn mini" id="reportBtn" type="button">导出报告</button>
+          <details class="raw" style="flex:none"><summary>原始 JSON</summary><pre id="rawJson">（暂无）</pre></details>
         </div>
       </div>
-      <button class="lt-dot ok" id="ltDot" type="button" aria-label="纠错助手：无问题">✓</button>
+
+      <details class="sec card" id="changesSec">
+        <summary>本次改动记录 <span class="n" id="chgCount">0</span>
+          <span style="flex:1"></span>
+          <button class="btn mini" id="undoBtn" type="button" title="撤销上一步程序化修改">撤销一步</button>
+          <button class="btn mini" id="revertAllBtn" type="button">还原全文</button>
+        </summary>
+        <div class="sec-body" id="chgList"><div class="hint">还没有修改。点问题卡片里的建议或「全部修正」后会记录在这里。</div></div>
+      </details>
+
+      <details class="sec card" id="rulesSec">
+        <summary>规则浏览器 <span class="n" id="ruleCount">–</span></summary>
+        <div class="sec-body">
+          <div class="row" style="margin-bottom:9px">
+            <input type="text" id="ruleSearch" placeholder="搜索规则 ID 或说明，如 PASSIVE_VOICE、comma" style="flex:1;min-width:180px;max-width:none">
+            <select id="ruleCat" style="max-width:210px"><option value="">全部分类</option></select>
+            <span class="badge" id="ruleShown">0</span>
+          </div>
+          <div class="rulelist" id="ruleList"><div class="hint">选择语言后加载服务端规则清单。</div></div>
+        </div>
+      </details>
+
+      <details class="sec card" id="advSec">
+        <summary>高级设置（服务器 · 检查范围 · 规则白名单 · 代码块）</summary>
+        <div class="sec-body adv-body">
+          <div class="grid2">
+            <div class="adv-row">
+              <label class="f" for="serverUrl">服务器地址</label>
+              <input type="text" id="serverUrl" value="http://localhost:8081" placeholder="http://localhost:8081">
+            </div>
+            <div class="adv-row">
+              <label class="f" for="motherTongue">母语 motherTongue</label>
+              <select id="motherTongue">
+                <option value="">不指定</option>
+                <option value="zh-CN">中文 zh-CN</option>
+                <option value="en-US">English (US)</option>
+                <option value="de-DE">Deutsch</option>
+                <option value="fr">Français</option>
+                <option value="ja-JP">日本語</option>
+              </select>
+            </div>
+            <div class="adv-row">
+              <label class="f" for="preferredVariants">偏好变体 preferredVariants</label>
+              <input type="text" id="preferredVariants" placeholder="例：en-US, zh-CN（自动检测时生效）">
+            </div>
+            <div class="adv-row">
+              <label class="f" for="mode">检查范围 mode</label>
+              <select id="mode">
+                <option value="all">全部规则（默认）</option>
+                <option value="textLevelOnly">仅文本级规则</option>
+                <option value="allButTextLevelOnly">排除文本级规则</option>
+              </select>
+            </div>
+            <div class="adv-row">
+              <label class="f" for="chunkSize">长文分段大小（字符，0=不分段）</label>
+              <input type="number" id="chunkSize" value="20000" min="0" step="5000">
+            </div>
+            <div class="adv-row">
+              <label class="f"><span class="switch"><input type="checkbox" id="skipCode" checked><i></i></span>
+                跳过 Markdown 代码块（``` 与 `行内`）</label>
+            </div>
+          </div>
+
+          <div class="adv-row">
+            <label class="f"><span class="switch"><input type="checkbox" id="enabledOnly"><i></i></span>
+              仅启用指定规则 enabledOnly（白名单，逗号分隔）</label>
+            <input type="text" id="enabledRules" placeholder="例：EN_A_VS_AN, PASSIVE_VOICE">
+          </div>
+
+          <div class="adv-row">
+            <label class="f"><span class="switch"><input type="checkbox" id="catWhitelist"><i></i></span>
+              分类白名单 enabledCategories（只检查勾选的分类，与下方忽略列表互斥）</label>
+            <div class="catpick" id="catPick"><span class="f" style="color:var(--muted)">选择语言后加载分类。</span></div>
+          </div>
+
+          <div class="grid2">
+            <div class="adv-row">
+              <span class="f">已忽略的规则（disabledRules）</span>
+              <div class="chips" id="disabledChips"><span class="f" style="color:var(--muted)">（无）</span></div>
+            </div>
+            <div class="adv-row">
+              <span class="f">已忽略的分类（disabledCategories）</span>
+              <div class="chips" id="disabledCatChips"><span class="f" style="color:var(--muted)">（无）</span></div>
+            </div>
+          </div>
+
+          <div class="adv-row">
+            <span class="f">拼写白名单（来自「词库」收藏，仅本浏览器；服务端 /v2/words 需数据库，未接）</span>
+            <div class="chips" id="dictChips"><span class="f" style="color:var(--muted)">（无）</span></div>
+          </div>
+
+          <div class="row" style="border-top:1px solid var(--border);padding-top:10px">
+            <span class="badge" id="capInfo">服务端能力：检测中…</span>
+            <span style="flex:1"></span>
+            <button class="btn mini" id="clearDraft" type="button">清空草稿</button>
+          </div>
+        </div>
+      </details>
     </div>
 
-    <div class="stats">
-      <span>字符 <b id="stChars">0</b></span>
-      <span>词数 <b id="stWords">0</b></span>
-      <span>错误 <b id="stMatches">0</b></span>
-      <span>耗时 <b id="stTime">–</b></span>
-      <span id="stDetect" style="display:none">检测语言 <b id="stDetectName"></b></span>
-      <span style="flex:1"></span>
-      <details class="raw"><summary>查看原始 JSON</summary><pre id="rawJson">（暂无）</pre></details>
-    </div>
+    <!-- 右：问题面板 -->
+    <aside class="col-side">
+      <div class="card panel">
+        <div class="panel-head">
+          <div class="seg" id="panelSeg">
+            <button class="seg-btn on" data-view="review" type="button">审阅 <b id="panelCnt">0</b></button>
+            <button class="seg-btn" data-view="bank" type="button">词库 <b id="bankCnt">0</b></button>
+          </div>
+          <span style="flex:1"></span>
+          <button class="btn mini" id="panelFixAll" type="button" title="先看改动清单再应用">全部应用</button>
+        </div>
+        <div class="view" id="viewReview">
+          <div class="progress"><i id="progBar"></i></div>
+          <div class="tabs" id="tabs"></div>
+          <div class="dist" id="distBar"></div>
+          <div class="deferred" id="deferredBar" hidden></div>
+          <div class="list" id="matchList"><div class="hint">输入或粘贴文本后自动检查。</div></div>
+        </div>
+        <div class="view" id="viewBank" hidden>
+          <div class="bank-bar"><input type="text" id="bankSearch" placeholder="搜索词或备注…"></div>
+          <label class="bank-wl"><span class="switch"><input type="checkbox" id="bankWl" checked><i></i></span>收藏的词不再报拼写错误</label>
+          <div class="bank-list" id="bankList"></div>
+          <div class="bank-foot">
+            <button class="btn mini" id="bankExport" type="button">导出 JSON</button>
+            <button class="btn mini" id="bankImportBtn" type="button">导入</button>
+            <input type="file" id="bankImportFile" accept=".json,application/json" hidden>
+            <span style="flex:1"></span>
+            <button class="btn mini" id="bankClear" type="button">清空</button>
+          </div>
+        </div>
+      </div>
+    </aside>
   </div>
-
-  <div class="results">
-    <h2 id="resultsTitle">校对结果</h2>
-    <div id="matchList"></div>
-  </div>
-
-  <details class="adv">
-    <summary>高级设置（服务器地址 · 母语 · 规则开关）</summary>
-    <div class="adv-body">
-      <div class="adv-row">
-        <label class="f" for="serverUrl">服务器地址（接入你的服务时改这里即可）</label>
-        <input type="text" id="serverUrl" value="http://localhost:8081" placeholder="http://localhost:8081">
-      </div>
-      <div class="adv-row">
-        <label class="f" for="motherTongue">母语 motherTongue（可选，用于母语者易错点提示）</label>
-        <select id="motherTongue">
-          <option value="">不指定</option>
-          <option value="zh-CN">中文 zh-CN</option>
-          <option value="en-US">English (US)</option>
-          <option value="de-DE">Deutsch</option>
-          <option value="fr">Français</option>
-          <option value="ja-JP">日本語</option>
-        </select>
-      </div>
-      <div class="adv-row">
-        <label class="f" for="preferredVariants">偏好语言变体 preferredVariants（逗号分隔，自动检测时生效）</label>
-        <input type="text" id="preferredVariants" placeholder="例：en-US, zh-CN">
-      </div>
-      <div class="adv-row">
-        <label class="f"><span class="switch"><input type="checkbox" id="enabledOnly"><i></i></span>
-          仅启用指定规则（enabledOnly，需填下方规则 ID）</label>
-        <input type="text" id="enabledRules" placeholder="例：HE_VERB_AGR, SINCE_FOR（逗号分隔）">
-      </div>
-      <div class="adv-row">
-        <span class="f">已忽略的规则（disabledRules，点卡片里的“忽略”自动加入）</span>
-        <div class="chips" id="disabledChips"><span class="f" style="color:var(--muted)">（无）</span></div>
-      </div>
-      <div class="adv-row">
-        <span class="f">已忽略的分类（disabledCategories，整类规则不再检查）</span>
-        <div class="chips" id="disabledCatChips"><span class="f" style="color:var(--muted)">（无）</span></div>
-      </div>
-      <div class="adv-row">
-        <span class="f">本地词典（点“加入词典”的词不再报拼写错误，仅本浏览器生效；接后端后可改为服务端词典）</span>
-        <div class="chips" id="dictChips"><span class="f" style="color:var(--muted)">（无）</span></div>
-      </div>
-    </div>
-  </details>
 
   <footer>
-    提示：编辑区右下角的圆点显示错误数量，点开可逐个纠错（与官方浏览器插件交互一致）；点正文中的下划线词可直接定位。
-    快捷键：<code>Ctrl/⌘+Enter</code> 立即检查，<code>Esc</code> 关闭浮层，<code>Alt+←/→</code> 在浮层中逐个切换。
-    规则/分类/词典的忽略会保存在本浏览器，接入后端后可持久化到用户系统。
-    首次访问请确认 LanguageTool 服务已带 <code>--allow-origin</code> 参数启动，否则浏览器会拦截跨域请求。
+    带下划线的词<b>直接点</b>，纠错卡会贴在那个词旁边弹出，改完自动跳到下一处；右侧「审阅」只是清单，用来扫读和批量处理。
+    快捷键 <code>⌘/Ctrl+Enter</code> 检查、<code>Alt+←/→</code> 上下一个问题、<code>Alt+Enter</code> 采用建议、<code>Esc</code> 关闭、<code>⌘/Ctrl+Z</code> 撤销、<code>?</code> 帮助。
+    规则/分类/词典/草稿均保存在本浏览器；接入后端后可迁到用户系统。
   </footer>
 </div>
+
+<div class="modal" id="helpModal">
+  <div class="box">
+    <h3>快捷键与服务端能力 <span style="flex:1"></span><button class="btn mini" data-close="helpModal" type="button">✕</button></h3>
+    <div class="mbody">
+      <h4>快捷键</h4>
+      <div class="kv">
+        <div><kbd>⌘/Ctrl</kbd>+<kbd>Enter</kbd></div><div>立即检查全文</div>
+        <div><kbd>Esc</kbd></div><div>关闭就地纠错卡 / 弹窗</div>
+        <div><kbd>Alt</kbd>+<kbd>←</kbd> / <kbd>→</kbd></div><div>跳到上一个 / 下一个问题（会就地弹出纠错卡）</div>
+        <div><kbd>Alt</kbd>+<kbd>Enter</kbd></div><div>采用当前问题的第一个建议</div>
+        <div><kbd>⌘/Ctrl</kbd>+<kbd>Z</kbd></div><div>撤销由「应用建议 / 全部修正」造成的改动</div>
+      </div>
+      <h4>写作与词库</h4>
+      <div class="kv">
+        <div>边写边查</div><div>停止输入 0.7 秒后自动检查，问题在正文里标下划线；顶部徽章显示待处理数量</div>
+        <div>收藏词</div><div>选中任意词 → 浮出「＋ 收藏」；或点纠错卡里的「收藏」。收藏的词进右侧「词库」，默认不再报拼写错误</div>
+        <div>查看词库</div><div>点右上角「我的词库 N」或右侧面板的「词库」标签；收藏后提示条上也有「查看词库」</div>
+      </div>
+      <h4>这一版接上的服务端能力</h4>
+      <div class="kv" id="capKv"></div>
+      <h4>完整说明</h4>
+      <div class="kv">
+        <div>功能 + 配置</div><div><a href="./guide.html" target="_blank" rel="noopener" style="color:var(--accent)">打开《使用与配置说明》→</a>
+          （界面分区、纠错弹窗每个按钮、词库、全部配置项与推荐值）</div>
+      </div>
+      <h4>仍未接的</h4>
+      <div class="kv">
+        <div>/v2/words</div><div>服务端个人词典：需要配置数据库与 user id，本地版未开；页面用浏览器本地词典替代</div>
+        <div>HTML 标记校对</div><div>服务端 data+markup 通道实测返回空结果，未启用；贴纯文本效果一致</div>
+        <div>鉴权 / 限流</div><div>开源版只有 properties 里的 basic auth，正式上线建议在网关做</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="applyModal">
+  <div class="box">
+    <h3>应用全部建议 <span class="badge" id="applyCnt"></span>
+      <span style="flex:1"></span>
+      <button class="btn mini" data-close="applyModal" type="button">✕</button></h3>
+    <div class="mbody" id="applyBody"></div>
+    <div style="padding:0 16px 16px;display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn" data-close="applyModal" type="button">取消</button>
+      <button class="btn primary" id="applyConfirm" type="button">确认应用</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
 
 <script>
 "use strict";
 const $ = id => document.getElementById(id);
 const ta = $("input"), hl = $("hl"), backdrop = document.querySelector(".backdrop");
 
-const state = { matches: [], disabledRules: new Set(), disabledCategories: new Set(), localDict: new Set(),
-                checking: false, timer: null, seq: 0 };
-let popIdx = 0;
+const state = {
+  matches: [], tab: "all",
+  disabledRules: new Set(), disabledCategories: new Set(), enabledCategories: new Set(), localDict: new Set(),
+  checking: false, timer: null, seq: 0,
+  rules: [], catNames: new Map(), maxTextLength: null, serverVersion: "",
+  changes: [], undoStack: [], baseline: null, programmatic: false,
+  chunks: 1,
+  ignoredOnce: [], fixIdx: -1, pendingFix: null, applyPlan: null,
+  wordbank: [], bankView: false, selWord: "", pendingRecheck: false
+};
 
-/* ---------- 持久化 ---------- */
-const LS = "lt-web-editor";
+/* ---------------- 工具 ---------------- */
+const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let toastTimer = null;
+function toast(msg, actLabel, actFn){
+  const t = $("toast");
+  t.innerHTML = esc(msg) + (actLabel ? ' <button type="button" id="toastAct">' + esc(actLabel) + "</button>" : "");
+  t.className = "toast show" + (actLabel ? " has-act" : "");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>{ t.className = "toast"; }, actLabel ? 4200 : 1900);
+  if(actLabel){
+    const b = $("toastAct");
+    if(b) b.onclick = () => { t.className = "toast"; if(actFn) actFn(); };
+  }
+}
+function download(name, content, type){
+  const blob = new Blob([content], {type: type || "text/plain;charset=utf-8"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 3000);
+}
+function apiBase(){
+  const u = $("serverUrl").value.trim().replace(/\/+$/,"");
+  return u || "http://localhost:8081";
+}
+
+/* ---------------- 持久化 ---------------- */
+const LS = "lt-web-editor", SETS_KEY = "lt-web-editor-sets", DRAFT_KEY = "lt-web-editor-draft";
 function savePrefs(){
   try{ localStorage.setItem(LS, JSON.stringify({
     serverUrl:$("serverUrl").value, lang:$("lang").value, level:$("level").value,
     auto:$("auto").checked, motherTongue:$("motherTongue").value,
-    preferredVariants:$("preferredVariants").value,
+    preferredVariants:$("preferredVariants").value, mode:$("mode").value,
+    chunkSize:$("chunkSize").value, skipCode:$("skipCode").checked,
     enabledOnly:$("enabledOnly").checked, enabledRules:$("enabledRules").value,
-    theme:$("theme").value
+    catWhitelist:$("catWhitelist").checked, theme:$("theme").value
   })); }catch(e){}
 }
 function loadPrefs(){
   try{
-    const p = JSON.parse(localStorage.getItem(LS)||"{}");
-    for(const k of ["serverUrl","motherTongue","preferredVariants","enabledRules"])
-      if(p[k]) $(k).value = p[k];
-    for(const k of ["auto","enabledOnly"]) if(p[k]) $(k).checked = true;
+    const p = JSON.parse(localStorage.getItem(LS) || "{}");
+    for(const k of ["serverUrl","motherTongue","preferredVariants","enabledRules","mode","chunkSize"])
+      if(p[k] != null && p[k] !== "") $(k).value = p[k];
+    for(const k of ["auto","enabledOnly","catWhitelist"]) if(p[k]) $(k).checked = true;
+    if(p.skipCode === false) $("skipCode").checked = false;
     return p;
   }catch(e){ return {}; }
 }
 const prefs = loadPrefs();
 
-/* 规则/分类/词典的本地持久化 */
-const SETS_KEY = "lt-web-editor-sets";
 function saveSets(){
   try{ localStorage.setItem(SETS_KEY, JSON.stringify({
-    rules:[...state.disabledRules], cats:[...state.disabledCategories], dict:[...state.localDict]
+    rules:[...state.disabledRules], cats:[...state.disabledCategories],
+    ecats:[...state.enabledCategories], dict:[...state.localDict]
   })); }catch(e){}
 }
 function loadSets(){
   try{
-    const s = JSON.parse(localStorage.getItem(SETS_KEY)||"{}");
+    const s = JSON.parse(localStorage.getItem(SETS_KEY) || "{}");
     if(s.rules) state.disabledRules = new Set(s.rules);
     if(s.cats)  state.disabledCategories = new Set(s.cats);
+    if(s.ecats) state.enabledCategories = new Set(s.ecats);
     if(s.dict)  state.localDict = new Set(s.dict);
   }catch(e){}
 }
+/* ---------------- 我的词库 ---------------- */
+const BANK_KEY = "lt-wordbank";
+function loadBank(){
+  try{
+    const a = JSON.parse(localStorage.getItem(BANK_KEY) || "[]");
+    if(Array.isArray(a)){
+      state.wordbank = a.filter(x => x && x.w).map(x => ({
+        w: String(x.w), note: String(x.note || ""), at: x.at || Date.now(), wl: x.wl !== false
+      }));
+    }
+  }catch(e){}
+  if(!state.wordbank.length && state.localDict && state.localDict.size){
+    state.wordbank = [...state.localDict].map(w => ({w, note: "", at: Date.now(), wl: true}));
+    saveBank();
+  }
+  syncWhitelist();
+}
+function saveBank(){
+  try{ localStorage.setItem(BANK_KEY, JSON.stringify(state.wordbank)); }catch(e){}
+}
+function syncWhitelist(){
+  state.localDict = new Set(state.wordbank.filter(x => x.wl !== false).map(x => x.w.toLowerCase()));
+  saveSets();
+}
+function addWord(raw, note, opts){
+  opts = opts || {};
+  let w = String(raw || "").trim().replace(/^[^\w\u4e00-\u9fff]+|[^\w\u4e00-\u9fff]+$/g, "").replace(/\s+/g, " ");
+  if(!w){ toast("先选中一个词再收藏"); return false; }
+  if(w.length > 40){ toast("太长了，收藏单词或短语就好"); return false; }
+  const key = w.toLowerCase();
+  if(state.wordbank.some(x => x.w.toLowerCase() === key)){
+    if(!opts.silent) toast("「" + w + "」已经在词库里了", "查看词库", () => openBank());
+    return false;
+  }
+  state.wordbank.unshift({w, note: note || "", at: Date.now(), wl: true});
+  saveBank(); syncWhitelist(); renderBank(); renderChips();
+  if(!opts.silent) toast("已收藏「" + w + "」", "查看词库", () => openBank());
+  if(opts.noCheck) state.pendingRecheck = true; else check();
+  return true;
+}
+function removeWord(w){
+  const key = String(w).toLowerCase();
+  state.wordbank = state.wordbank.filter(x => x.w.toLowerCase() !== key);
+  saveBank(); syncWhitelist(); renderBank(); renderChips(); check();
+}
+function openBank(){
+  switchView("bank");
+  const panel = document.querySelector(".panel");
+  if(panel && panel.getBoundingClientRect().top > window.innerHeight - 200){
+    panel.scrollIntoView({behavior: "smooth", block: "start"});
+  }
+}
+function renderBank(){
+  const box = $("bankList");
+  if(!box) return;
+  $("bankCnt").textContent = state.wordbank.length;
+  $("bankBtnCnt").textContent = state.wordbank.length;
+  const q = ($("bankSearch") ? $("bankSearch").value : "").trim().toLowerCase();
+  const rows = q
+    ? state.wordbank.filter(x => (x.w + " " + (x.note || "")).toLowerCase().includes(q))
+    : state.wordbank;
+  if(!rows.length){
+    box.innerHTML = state.wordbank.length
+      ? '<div class="hint">没有匹配的词。</div>'
+      : '<div class="hint">词库还是空的。<br>在正文里选中一个词，浮出的「＋ 收藏」就能存进来。</div>';
+    return;
+  }
+  box.innerHTML = rows.map(x => `
+    <div class="bankrow">
+      <span class="bw" title="${esc(x.w)}">${esc(x.w)}</span>
+      <input class="bank-note" data-note="${esc(x.w)}" value="${esc(x.note || "")}" placeholder="备注：释义 / 例句">
+      <button class="bank-del" data-del="${esc(x.w)}" type="button" title="从词库删除">✕</button>
+    </div>`).join("");
+}
+
+let draftTimer = null;
+function saveDraft(){
+  clearTimeout(draftTimer);
+  draftTimer = setTimeout(()=>{ try{ localStorage.setItem(DRAFT_KEY, ta.value); }catch(e){} }, 600);
+}
+
 function applyTheme(){
   const v = $("theme").value;
   if(v === "auto") document.documentElement.removeAttribute("data-theme");
   else document.documentElement.dataset.theme = v;
 }
 
-function apiBase(){
-  let u = $("serverUrl").value.trim().replace(/\/+$/,"");
-  return u || "http://localhost:8081";
-}
-
-/* ---------- 状态与提示 ---------- */
+/* ---------------- 状态条 ---------------- */
 function setStatus(ok, text){
   $("statusDot").className = "dot " + (ok ? "ok" : "bad");
   $("statusText").textContent = text;
 }
-function showBanner(msg){
+function showBanner(msg, kind){
   const b = $("banner");
-  if(!msg){ b.className = "banner"; return; }
-  b.textContent = msg; b.className = "banner show";
+  if(!msg){ b.className = "banner"; b.textContent = ""; return; }
+  b.textContent = msg; b.className = "banner show" + (kind === "info" ? " info" : "");
 }
 
-/* ---------- 语言列表 ---------- */
-async function loadLanguages(){
+/* ---------------- 分类判定 ---------------- */
+function typeOf(m){
+  const cat = ((m.rule && m.rule.category && m.rule.category.id) || "").toUpperCase();
+  const rid = ((m.rule && m.rule.id) || "").toUpperCase();
+  const s = cat + " " + rid;
+  if(/MORFOLOGIK|HUNSPELL|SPELL|CONFUSION|^TYPO|_TYPO|TYPO_/.test(s) && !/TYPOGRAPHY/.test(cat)) return "typo";
+  if(/STYLE|REDUNDANCY|WORDINESS|PLAIN_ENGLISH|COLLOCATION|PLEONASM|INFORMAL|SIMPLIFY|PASSIVE/.test(s)) return "style";
+  if(/PUNCT|TYPOGRAPHY|CASING|SPACES|DASH|QUOT|COMMA|HYPHEN/.test(s)) return "punct";
+  if(/GRAMMAR|AGREEMENT|VERB|TENSE|NOUN|PRONOUN|ARTICLE|DETERMINER|SENTENCE|WORD_ORDER|MISSING|PREPOSITION|COMPARATIVE|PLURAL/.test(s)) return "grammar";
+  return "other";
+}
+const TYPE_LABEL = {typo:"拼写", grammar:"语法", punct:"标点", style:"风格", other:"其他"};
+
+/* 拼写类匹配 + 本地词典过滤 */
+function isSpellingMatch(m){
+  const rid = (m.rule && m.rule.id) || "";
+  const cat = (m.rule && m.rule.category && m.rule.category.id) || "";
+  return /MORFOLOGIK|HUNSPELL|SPELL|TYPO|CONFUSION/i.test(rid + " " + cat);
+}
+function flaggedWord(m){
+  const c = m.context || {};
+  return String(c.text || "").slice(c.offset, c.offset + c.length).trim();
+}
+function isDictHidden(m){
+  if(!state.localDict.size || !isSpellingMatch(m)) return false;
+  const w = flaggedWord(m).toLowerCase();
+  return !!w && !/\s/.test(w) && state.localDict.has(w);
+}
+
+/* ---------------- 连接与能力 ---------------- */
+async function connect(){
+  const base = apiBase();
   try{
-    const r = await fetch(apiBase() + "/v2/languages");
-    if(!r.ok) throw new Error(r.status);
+    const r = await fetch(base + "/v2/languages");
+    if(!r.ok) throw new Error("HTTP " + r.status);
     const langs = await r.json();
     const sel = $("lang");
-    sel.innerHTML = langs
-      .slice().sort((a,b)=>a.longCode.localeCompare(b.longCode))
-      .map(l=>`<option value="${l.longCode}">${l.name} (${l.longCode})</option>`).join("");
-    const saved = prefs.lang && langs.some(l=>l.longCode===prefs.lang) ? prefs.lang : "en-US";
-    sel.value = langs.some(l=>l.longCode===saved) ? saved : langs[0].longCode;
-    setStatus(true, "已连接 " + apiBase().replace(/^https?:\/\//,""));
+    const prev = sel.value;
+    sel.innerHTML = langs.slice().sort((a,b)=>a.longCode.localeCompare(b.longCode))
+      .map(l=>`<option value="${esc(l.longCode)}">${esc(l.name)} (${esc(l.longCode)})</option>`).join("");
+    const want = prefs.lang || prev || "en-US";
+    sel.value = langs.some(l=>l.longCode===want) ? want : (langs[0] ? langs[0].longCode : "en-US");
+    setStatus(true, "已连接 " + base.replace(/^https?:\/\//,""));
+    showBanner(null);
+    loadConfig(sel.value);
   }catch(e){
     setStatus(false, "无法连接服务器");
-    showBanner("无法连接 " + apiBase() + " ：请确认服务已启动，且启动时带有 --allow-origin 参数（浏览器跨域需要）。");
+    showBanner("无法连接 " + base + "：请确认服务已启动并带 --allow-origin（浏览器跨域需要）。");
   }
 }
 
-/* ---------- 请求 ---------- */
-function buildParams(){
+async function loadConfig(lang){
+  if(!lang) return;
+  try{
+    const r = await fetch(apiBase() + "/v2/configinfo?language=" + encodeURIComponent(lang));
+    if(!r.ok) throw new Error("HTTP " + r.status);
+    const d = await r.json();
+    state.maxTextLength = (d.parameter && d.parameter.maxTextLength) || null;
+    state.rules = d.rules || [];
+    state.serverVersion = (d.software && d.software.version) || "";
+    const map = new Map();
+    for(const ru of state.rules){
+      if(ru.categoryId && !map.has(ru.categoryId)) map.set(ru.categoryId, ru.categoryName || ru.categoryId);
+    }
+    state.catNames = map;
+    renderCatPicker(); renderRuleBrowser(); renderCapability();
+  }catch(e){
+    state.rules = [];
+    renderCapability();
+  }
+}
+
+function renderCapability(){
+  const ml = state.maxTextLength;
+  const mlText = !ml ? "未知" : (ml > 1e7 ? "不限" : ml.toLocaleString() + " 字符");
+  $("capInfo").textContent = `服务端能力：${state.serverVersion ? "v" + state.serverVersion + " · " : ""}` +
+    `${state.rules.length} 条规则 · ${state.catNames.size} 个分类 · 上限 ${mlText}`;
+  const kv = $("capKv");
+  if(kv) kv.innerHTML = `
+    <div>GET /v2/languages</div><div>语言列表，下拉自动填充</div>
+    <div>GET /v2/configinfo</div><div>规则清单 ${state.rules.length} 条、分类 ${state.catNames.size} 个、文本上限 ${mlText}</div>
+    <div>POST /v2/check</div><div>level / mode / motherTongue / preferredVariants / enabledRules / disabledRules / enabledCategories / disabledCategories</div>
+    <div>前端分段</div><div>超过分段阈值自动切片，偏移量回填，进度显示在统计栏</div>`;
+}
+
+/* ---------------- 请求参数 ---------------- */
+function buildParams(text, lang){
   const p = new URLSearchParams();
-  p.set("text", ta.value);
-  p.set("language", $("auto").checked ? "auto" : $("lang").value);
+  p.set("text", text);
+  p.set("language", lang);
   p.set("level", $("level").value);
+  if($("mode").value && $("mode").value !== "all") p.set("mode", $("mode").value);
   if($("motherTongue").value) p.set("motherTongue", $("motherTongue").value);
   const pv = $("preferredVariants").value.trim();
   if(pv && $("auto").checked) p.set("preferredVariants", pv);
@@ -356,262 +850,562 @@ function buildParams(){
     if(rules) p.set("enabledRules", rules);
   }
   if(state.disabledRules.size) p.set("disabledRules", [...state.disabledRules].join(","));
-  if(state.disabledCategories.size) p.set("disabledCategories", [...state.disabledCategories].join(","));
+  if($("catWhitelist").checked && state.enabledCategories.size)
+    p.set("enabledCategories", [...state.enabledCategories].join(","));
+  else if(state.disabledCategories.size)
+    p.set("disabledCategories", [...state.disabledCategories].join(","));
   return p;
 }
 
-/* 拼写类匹配的识别与本地词典过滤 */
-function isSpellingMatch(m){
-  const rid = (m.rule && m.rule.id) || "";
-  const cat = (m.rule && m.rule.category && m.rule.category.id) || "";
-  return /MORFOLOGIK|HUNSPELL|SPELL|TYPO/i.test(rid + " " + cat);
-}
-function flaggedWord(m){
-  const c = m.context || {};
-  return (c.text.slice(c.offset, c.offset + c.length) || "").trim();
-}
-function isDictHidden(m){
-  if(!state.localDict.size) return false;
-  if(!isSpellingMatch(m)) return false;
-  const w = flaggedWord(m).toLowerCase();
-  return w && !/\s/.test(w) && state.localDict.has(w);
+/* ---------------- 代码块屏蔽（等长空格，偏移不变） ---------------- */
+function maskCode(text){
+  if(!$("skipCode").checked) return text;
+  let out = text;
+  const mask = (a, b) => {
+    if(b <= a) return;
+    out = out.slice(0, a) + out.slice(a, b).replace(/[^\n]/g, " ") + out.slice(b);
+  };
+  const fences = /```[\s\S]*?```|~~~[\s\S]*?~~~/g;
+  let m;
+  while((m = fences.exec(text))) mask(m.index, m.index + m[0].length);
+  const inline = /`[^`\n]+`/g;
+  while((m = inline.exec(text))) mask(m.index, m.index + m[0].length);
+  return out;
 }
 
+/* ---------------- 分段 ---------------- */
+function chunkText(text, max){
+  if(!max || text.length <= max) return [{text, offset: 0}];
+  const out = [];
+  let i = 0;
+  while(i < text.length){
+    let end = Math.min(i + max, text.length);
+    if(end < text.length){
+      const win = text.slice(i, end);
+      const cuts = [
+        win.lastIndexOf("\n\n"), win.lastIndexOf("\n"),
+        win.lastIndexOf(". "), win.lastIndexOf("! "), win.lastIndexOf("? "),
+        win.lastIndexOf("。"), win.lastIndexOf("！"), win.lastIndexOf("？")
+      ];
+      const cut = Math.max(...cuts);
+      if(cut > max * 0.4) end = i + cut + 1;
+    }
+    out.push({text: text.slice(i, end), offset: i});
+    i = end;
+  }
+  return out;
+}
+
+/* ---------------- 检查 ---------------- */
 async function check(){
-  if(!ta.value.trim()){ state.matches=[]; render(); $("stTime").textContent="–"; $("rawJson").textContent="（暂无）"; return; }
+  const text = ta.value;
+  if(!text.trim()){
+    state.matches = []; state.chunks = 1;
+    $("stTime").textContent = "–"; $("rawJson").textContent = "（暂无）";
+    render(); return;
+  }
   const seq = ++state.seq;
-  state.checking = true;
-  updateDot();
-  $("checkNow").innerHTML = '<span class="spin"></span> 检查中…';
+  state.checking = true; renderBadge();
+  $("checkNow").innerHTML = '<span class="spin"></span> 检查中';
   const t0 = performance.now();
+
+  const lang = $("auto").checked ? "auto" : $("lang").value;
+  const masked = maskCode(text);
+  const cfgMax = Number($("chunkSize").value) || 0;
+  let limit = cfgMax;
+  if(state.maxTextLength && state.maxTextLength < 1e7){
+    limit = limit > 0 ? Math.min(limit, state.maxTextLength) : state.maxTextLength;
+  }
+  const chunks = chunkText(masked, limit > 0 ? limit : 0);
+  state.chunks = chunks.length;
+
   try{
-    const r = await fetch(apiBase() + "/v2/check", { method:"POST", body: buildParams() });
-    const data = await r.json().catch(()=>({}));
-    if(seq !== state.seq) return;               // 已有更新的请求，丢弃旧结果
-    if(!r.ok) throw new Error(data && data.error ? data.error.message || data.error : ("HTTP " + r.status));
-    state.matches = (data.matches || []).filter(m => !isDictHidden(m));
-    $("rawJson").textContent = JSON.stringify(data, null, 2);
+    const all = [];
+    let first = null, detected = null;
+    for(let k = 0; k < chunks.length; k++){
+      if(seq !== state.seq) return;
+      $("stChunk").style.display = chunks.length > 1 ? "" : "none";
+      $("stChunkN").textContent = chunks.length > 1 ? `${k + 1}/${chunks.length}` : "1";
+      const r = await fetch(apiBase() + "/v2/check", {method: "POST", body: buildParams(chunks[k].text, lang)});
+      const data = await r.json().catch(()=>({}));
+      if(!r.ok) throw new Error((data && data.error && (data.error.message || data.error)) || ("HTTP " + r.status));
+      if(k === 0){
+        first = data;
+        detected = data.language && data.language.detectedLanguage;
+        state.serverVersion = (data.software && data.software.version) || state.serverVersion;
+      }
+      for(const m of (data.matches || [])){
+        all.push(Object.assign({}, m, {offset: (m.offset || 0) + chunks[k].offset}));
+      }
+    }
+    if(seq !== state.seq) return;
+    state.matches = all.filter(m => !isDictHidden(m));
+    $("rawJson").textContent = JSON.stringify(first, null, 2);
     $("stTime").textContent = Math.round(performance.now() - t0) + " ms";
-    const det = data.language && data.language.detectedLanguage;
+    const det = detected;
     $("stDetect").style.display = $("auto").checked ? "" : "none";
-    if(det) $("stDetectName").textContent = det.name + " (" + det.code + ")";
-    showBanner(null);
+    if(det) $("stDetectName").textContent = (det.name || "") + (det.code ? " (" + det.code + ")" : "");
     setStatus(true, "已连接 " + apiBase().replace(/^https?:\/\//,""));
+    showBanner(null);
   }catch(e){
     if(seq !== state.seq) return;
     state.matches = [];
-    showBanner("检查失败：" + e.message + "（请确认服务器地址、网络与 CORS 配置）");
+    showBanner("检查失败：" + e.message + "（确认服务器地址、网络与 CORS 配置）");
   }finally{
     if(seq === state.seq){
       state.checking = false;
-      $("checkNow").textContent = "立即检查";
+      $("checkNow").textContent = "重查 ⌘↵";
       render();
     }
   }
 }
 function scheduleCheck(){ clearTimeout(state.timer); state.timer = setTimeout(check, 700); }
 
-/* ---------- 渲染 ---------- */
-function catClass(m){
-  const c = (m.rule && m.rule.category && m.rule.category.id || "") + " " + (m.rule && m.rule.id || "");
-  if(/TYPO|SPELL|CONFUSION|TPS/i.test(c)) return "typo";
-  if(/STYLE|COLLOC|REDUNDAN|WORDINESS|PLAIN|PICKY|TZ_|EN_|CASING/i.test(c) && !/GRAMMAR/.test(c)) return "style";
-  if(/PUNCT|CASING|SPACES|DASH/i.test(c)) return "punct";
-  if(/GRAMMAR|AGR| Agreement|VERB|NOUN|PRONOUN|MISSING|SENTENCE/i.test(c)) return "grammar";
-  return "punct";
+/* ---------------- 渲染 ---------------- */
+function visibleMatches(){
+  const arr = state.matches.map((m, i) => ({m, i}));
+  return state.tab === "all" ? arr : arr.filter(o => typeOf(o.m) === state.tab);
 }
-function esc(s){ return s.replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function counts(){
+  const c = {all: state.matches.length, typo:0, grammar:0, punct:0, style:0, other:0};
+  for(const m of state.matches) c[typeOf(m)]++;
+  return c;
+}
+function ridOf(m){ return (m.rule && m.rule.id) || ""; }
+function ruleDesc(rid){
+  if(!rid || !state.rules.length) return "";
+  const r = state.rules.find(x => x.ruleId === rid);
+  return r ? (r.description || "") : "";
+}
+function renderTabs(){
+  const c = counts();
+  const order = [["all","全部"],["typo","拼写"],["grammar","语法"],["punct","标点"],["style","风格"]];
+  if(c.other) order.push(["other","其他"]);
+  $("tabs").innerHTML = order.map(([k,label]) =>
+    `<button class="tab t-${k}${state.tab===k?" on":""}" data-tab="${k}" type="button">${label} <b>${c[k]}</b></button>`
+  ).join("");
+  const total = c.all || 1;
+  $("distBar").innerHTML = ["typo","grammar","punct","style","other"]
+    .map(k => c[k] ? `<i class="${k}" style="width:${(c[k]/total*100).toFixed(2)}%"></i>` : "").join("");
+}
+function renderBadge(){
+  const b = $("countBadge");
+  const n = state.matches.length;
+  if(state.checking){ b.hidden = false; b.className = "count-badge warn"; b.textContent = "检查中…"; return; }
+  b.hidden = false;
+  if(n > 0){ b.className = "count-badge"; b.textContent = n + " 个问题"; }
+  else { b.className = "count-badge ok"; b.textContent = "✓ 没问题"; }
+  if(state.prevCount !== n && state.prevCount != null && n > state.prevCount){
+    b.classList.add("flash");
+    setTimeout(() => b.classList.remove("flash"), 1300);
+  }
+  state.prevCount = n;
+}
+function renderDeferred(){
+  const bar = $("deferredBar");
+  if(!state.ignoredOnce.length){ bar.hidden = true; bar.innerHTML = ""; return; }
+  bar.hidden = false;
+  bar.innerHTML = `已跳过 <b>${state.ignoredOnce.length}</b> 条 <button type="button" id="restoreBtn">恢复</button>`;
+}
 
 function render(){
-  $("stChars").textContent = ta.value.length;
-  $("stWords").textContent = (ta.value.match(/[\u4e00-\u9fff]|[A-Za-z0-9'’-]+/g) || []).length;
-  $("stMatches").textContent = state.matches.length;
-  $("resultsTitle").textContent = "校对结果（" + state.matches.length + "）";
-  updateDot();
-
-  /* 高亮层 */
   const text = ta.value;
-  const ms = state.matches.filter(m=>typeof m.offset==="number" && m.length>0)
-                         .sort((a,b)=>a.offset-b.offset);
+  $("stChars").textContent = text.length;
+  $("stWords").textContent = (text.match(/[\u4e00-\u9fff]|[A-Za-z0-9'’-]+/g) || []).length;
+  $("stSent").textContent = (text.match(/[.!?。！？]+|\n{2,}/g) || []).length;
+  $("stMatches").textContent = state.matches.length;
+  $("panelCnt").textContent = state.matches.length;
+  $("bankCnt").textContent = state.wordbank.length;
+  $("bankBtnCnt").textContent = state.wordbank.length;
+  const done = state.changes.length;
+  $("progBar").style.width = (done + state.matches.length)
+    ? Math.min(100, done / (done + state.matches.length) * 100).toFixed(1) + "%" : "0%";
+  renderBadge(); renderTabs(); renderHighlights(); renderPanel(); renderDeferred(); renderChanges();
+  if($("fixcard").classList.contains("open")) renderFix();
+
+  /* 应用建议后自动跳到下一处 */
+  if(state.pendingFix != null){
+    const target = state.pendingFix; state.pendingFix = null;
+    if(!state.matches.length){ closeFix(); }
+    else{
+      let idx = state.matches.findIndex(x => x.offset === target);
+      if(idx < 0) idx = state.matches.findIndex(x => x.offset >= target);
+      if(idx < 0) idx = 0;
+      openFix(idx);
+    }
+  }
+}
+
+function renderHighlights(){
+  const text = ta.value;
+  const ms = visibleMatches().map(o => o.m)
+    .filter(m => typeof m.offset === "number" && m.length > 0)
+    .sort((a,b) => a.offset - b.offset);
   let html = "", pos = 0;
-  const usedIdx = new Set();
   for(const m of ms){
     const start = m.offset, end = m.offset + m.length;
-    if(start < pos) continue;                   // 重叠的取前一个
-    usedIdx.add(state.matches.indexOf(m));
+    if(start < pos || start > text.length) continue;
     html += esc(text.slice(pos, start));
-    html += `<mark class="hl ${catClass(m)}">${esc(text.slice(start, end))}</mark>`;
+    html += `<mark class="hl ${typeOf(m)}" data-off="${start}" data-len="${m.length}">${esc(text.slice(start, end))}</mark>`;
     pos = end;
   }
   html += esc(text.slice(pos)) + "\n";
   hl.innerHTML = html;
+}
 
-  /* 错误卡片 */
+function renderPanel(){
   const list = $("matchList");
+  const vis = visibleMatches();
   if(!state.matches.length){
-    list.innerHTML = text.trim()
-      ? '<div class="hint">✓ 未发现问题。可尝试切换“严格”级别以检查风格类问题。</div>'
-      : '<div class="hint">输入或粘贴文本后自动开始检查。</div>';
+    list.innerHTML = ta.value.trim()
+      ? '<div class="hint ok">✓ 没有待处理的问题。<br>可切到「严格」级别再查一遍风格问题。</div>'
+      : '<div class="hint">输入或粘贴文本后自动检查。</div>';
     return;
   }
-  list.innerHTML = state.matches.map((m,i)=>{
+  if(!vis.length){
+    list.innerHTML = '<div class="hint">这个分类下没有问题，换个标签看看。</div>';
+    return;
+  }
+  list.innerHTML = vis.map(({m, i}) => {
     const ctx = m.context || {text:"", offset:0, length:0};
-    const before = esc(ctx.text.slice(0, ctx.offset));
-    const mid = esc(ctx.text.slice(ctx.offset, ctx.offset + ctx.length));
-    const after = esc(ctx.text.slice(ctx.offset + ctx.length));
-    const reps = (m.replacements||[]).slice(0,6)
-      .map(r=>`<button class="fix" data-i="${i}" data-v="${esc(r.value)}">${esc(r.value)}</button>`).join("");
+    const before = esc(String(ctx.text||"").slice(0, ctx.offset));
+    const mid = esc(String(ctx.text||"").slice(ctx.offset, ctx.offset + ctx.length));
+    const after = esc(String(ctx.text||"").slice(ctx.offset + ctx.length));
+    const reps = (m.replacements || []).slice(0, 3)
+      .map((r, k) => `<button class="fix${k===0?" rec":""}" data-i="${i}" data-k="${k}" type="button" title="${esc(r.value)}">${esc(r.value) || "（删除）"}</button>`).join("");
     const cat = m.rule && m.rule.category ? m.rule.category.name : "";
     const catId = m.rule && m.rule.category ? m.rule.category.id : "";
-    const rid = m.rule ? m.rule.id : "";
-    const ignored = state.disabledRules.has(rid);
-    return `<div class="card match ${catClass(m)}">
-      <div class="ctx">${before}<b>${mid||"（空）"}</b>${after}</div>
-      <div class="msg">${esc(m.message)}${m.shortMessage?` <span style="color:var(--muted)">（${esc(m.shortMessage)}）</span>`:""}</div>
+    const rid = ridOf(m);
+    return `<div class="match ${typeOf(m)}${state.fixIdx===i ? " active" : ""}" data-i="${i}">
+      <div class="ctx">${before}<b>${mid || "（空）"}</b>${after}</div>
+      <div class="msg">${esc(m.message)}</div>
       <div class="row">
         <span class="badge">${esc(cat)}</span><span class="badge">${esc(rid)}</span>
         ${reps}
-        <button class="btn mini ignore" data-rule="${esc(rid)}" ${ignored?"disabled":""}>${ignored?"已忽略":"忽略此规则"}</button>
-        ${catId?`<button class="btn mini" data-cat="${esc(catId)}">忽略此分类</button>`:""}
-        ${isSpellingMatch(m)?`<button class="btn mini" data-dictword="${esc(flaggedWord(m))}">加入词典</button>`:""}
+      </div>
+      <div class="row acts">
+        <button class="btn mini" data-once="${i}" type="button" title="这条先跳过，不会写入忽略列表">跳过</button>
+        <button class="btn mini" data-ignore="${esc(rid)}" type="button">永久忽略</button>
+        <button class="btn mini" data-dict="${esc(flaggedWord(m) || ta.value.slice(m.offset, m.offset + m.length))}" type="button" title="收藏到我的词库，同时不再报拼写错误">收藏</button>
+        ${catId ? `<button class="btn mini" data-ignorecat="${esc(catId)}" type="button" title="整类规则都不再检查：${esc(cat)}">忽略此类</button>` : ""}
       </div>
     </div>`;
   }).join("");
 }
 
-/* ---------- 悬浮圆点 + 纠错浮层 ---------- */
-function updateDot(){
-  const dot = $("ltDot");
-  if(state.checking){
-    dot.className = "lt-dot warn pulse"; dot.textContent = "…";
-    dot.setAttribute("aria-label", "正在检查");
-  }else{
-    const n = state.matches.length;
-    if(n > 0){ dot.className = "lt-dot err"; dot.textContent = n > 99 ? "99+" : n; }
-    else{ dot.className = "lt-dot ok"; dot.textContent = "✓"; }
-    dot.setAttribute("aria-label", `纠错助手：${n} 个问题`);
-  }
-  $("popCnt").textContent = state.matches.length ? `（${state.matches.length} 个问题）` : "（无问题）";
-  if(!state.checking && !state.matches.length) closePop();
-  if($("pop").classList.contains("open")) renderPop();
-}
-function openPop(i){
-  popIdx = Math.max(0, Math.min(i || 0, state.matches.length - 1));
-  $("pop").classList.add("open");
-  renderPop();
-}
-function closePop(){ $("pop").classList.remove("open"); }
-function renderPop(){
-  const body = $("popBody"), ms = state.matches;
-  if(!ms.length){
-    body.innerHTML = '<div class="hint" style="padding:4px 0">✓ 没有发现问题。</div>';
-    $("popPos").textContent = "0 / 0";
+function renderChanges(){
+  $("chgCount").textContent = state.changes.length;
+  $("undoBtn").disabled = !state.undoStack.length;
+  $("revertAllBtn").disabled = !state.changes.length;
+  const box = $("chgList");
+  if(!state.changes.length){
+    box.innerHTML = '<div class="hint">还没有修改。点正文下划线或右侧建议，改完会记录在这里。</div>';
     return;
   }
-  if(popIdx >= ms.length) popIdx = ms.length - 1;
-  if(popIdx < 0) popIdx = 0;
-  const m = ms[popIdx];
-  const ctx = m.context || {text:"",offset:0,length:0};
-  const before = esc(ctx.text.slice(0, ctx.offset));
-  const mid = esc(ctx.text.slice(ctx.offset, ctx.offset + ctx.length));
-  const after = esc(ctx.text.slice(ctx.offset + ctx.length));
-  const reps = (m.replacements||[]).slice(0,6)
-    .map((r,k)=>`<button class="fix" data-pop="${k}" type="button">${esc(r.value)}</button>`).join("");
-  const cat = m.rule && m.rule.category ? m.rule.category.name : "";
-  const catId = m.rule && m.rule.category ? m.rule.category.id : "";
-  body.innerHTML = `<div class="ctx">${before}<b>${mid||"（空）"}</b>${after}</div>
-    <div class="msg">${esc(m.message)}</div>
-    <div class="row"><span class="badge">${esc(cat)}</span><span class="badge">${esc(m.rule?m.rule.id:"")}</span>${reps}
-      <button class="btn mini" id="popIgnore" type="button">忽略</button>
-      ${catId?`<button class="btn mini" id="popIgnoreCat" type="button">忽略分类</button>`:""}
-      ${isSpellingMatch(m)?`<button class="btn mini" id="popDict" type="button">加入词典</button>`:""}</div>`;
-  $("popPos").textContent = `${popIdx+1} / ${ms.length}`;
-  body.querySelectorAll(".fix").forEach(b=>b.addEventListener("click", ()=>
-    applyMatch(popIdx, m.replacements[+b.dataset.pop].value)));
-  body.querySelector("#popIgnore").addEventListener("click", ()=>{
-    if(m.rule){ state.disabledRules.add(m.rule.id); saveSets(); renderChips(); check(); }
-  });
-  const catBtn2 = body.querySelector("#popIgnoreCat");
-  if(catBtn2) catBtn2.addEventListener("click", ()=>{
-    state.disabledCategories.add(catId); saveSets(); renderChips(); check();
-  });
-  const dictBtn2 = body.querySelector("#popDict");
-  if(dictBtn2) dictBtn2.addEventListener("click", ()=>{
-    state.localDict.add(flaggedWord(m).toLowerCase()); saveSets(); renderChips(); check();
-  });
+  box.innerHTML = state.changes.slice().reverse().map(c =>
+    `<div class="chg"><span class="from">${esc(c.from) || "（空）"}</span><span>→</span>
+      <span class="to">${esc(c.to) || "（删除）"}</span>
+      <span class="rule">${esc(c.rule)}</span></div>`).join("");
+}
+
+/* ---------------- 就地纠错卡 ---------------- */
+function scrollToMatch(m){
+  const mk = hl.querySelector(`mark[data-off="${m.offset}"]`);
+  if(!mk) return;
+  const wr = $("dropZone").getBoundingClientRect();
+  const r = mk.getBoundingClientRect();
+  const topIn = r.top - wr.top;
+  const h = ta.clientHeight;
+  if(topIn < 40 || topIn > h - 90){
+    ta.scrollTop += topIn - h / 2;
+    backdrop.scrollTop = ta.scrollTop;
+  }
+}
+function positionFix(){
+  const card = $("fixcard"), m = state.matches[state.fixIdx];
+  if(!m) return;
+  const wrap = $("dropZone").getBoundingClientRect();
+  const cw = card.offsetWidth || 372, ch = card.offsetHeight || 150;
+  const mk = hl.querySelector(`mark[data-off="${m.offset}"]`);
+  let left = 12, top = 12;
+  if(mk){
+    const r = mk.getBoundingClientRect();
+    left = r.left - wrap.left;
+    top = r.bottom - wrap.top + 8;
+    if(top + ch > wrap.height - 6) top = Math.max(6, r.top - wrap.top - ch - 8);
+  }
+  left = Math.max(6, Math.min(left, wrap.width - cw - 6));
+  top = Math.max(6, Math.min(top, wrap.height - ch - 6));
+  card.style.left = Math.round(left) + "px";
+  card.style.top = Math.round(top) + "px";
+}
+function renderFix(){
+  const m = state.matches[state.fixIdx];
+  if(!m){ closeFix(); return; }
+  const ctx = m.context || {text:"", offset:0, length:0};
+  const before = esc(String(ctx.text||"").slice(0, ctx.offset));
+  const mid = esc(String(ctx.text||"").slice(ctx.offset, ctx.offset + ctx.length));
+  const after = esc(String(ctx.text||"").slice(ctx.offset + ctx.length));
+  const t = typeOf(m);
+  $("fcType").textContent = TYPE_LABEL[t];
+  $("fcType").className = "fc-type " + t;
+  $("fcRule").textContent = ridOf(m);
+  const vis = visibleMatches();
+  const k = vis.findIndex(o => o.i === state.fixIdx);
+  $("fcPos").textContent = `${k >= 0 ? k + 1 : state.fixIdx + 1} / ${state.matches.length}`;
+  $("fcCtx").innerHTML = `${before}<b>${mid || "（空）"}</b>${after}`;
+  $("fcMsg").textContent = m.message || "";
+  const reps = (m.replacements || []).slice(0, 5);
+  $("fcReps").innerHTML = reps.length
+    ? reps.map((r, kk) => `<button class="fix${kk===0?" rec":""}" data-rep="${kk}" type="button">${esc(r.value) || "（删除）"}</button>`).join("")
+    : '<span style="font-size:12px;color:var(--muted)">这条没有自动替换建议，需要自己改写。</span>';
+  let d = ruleDesc(ridOf(m));
+  const norm = t => String(t || "").toLowerCase().replace(/[^a-z0-9\u4e00-\u9fff]+/g, " ").trim();
+  if(d){
+    const nm = norm(m.message), nd = norm(d);
+    if(nm && nd && (nm.includes(nd) || nd.includes(nm))) d = "";
+  }
+  $("fcDesc").style.display = d ? "" : "none";
+  $("fcDesc").textContent = d ? "规则说明：" + d : "";
+  $("fcHint").textContent = reps.length ? "⌥↵ 采用第一个" : "";
+  /* 收藏状态就地显示，不再弹 toast */
+  const cur = ta.value.slice(m.offset, m.offset + m.length) || flaggedWord(m);
+  const entry = state.wordbank.find(x => x.w.toLowerCase() === cur.trim().toLowerCase());
+  $("fcSaved").hidden = !entry;
+  $("fcFav").disabled = !!entry;
+  $("fcFav").textContent = entry ? "✓ 已收藏" : "收藏";
+  if(entry){
+    $("fcNote").value = entry.note || "";
+    $("fcNote").dataset.w = entry.w;
+  }
+  positionFix();
+}
+function openFix(i, noScroll){
+  if(!state.matches.length){ closeFix(); return; }
+  i = Math.max(0, Math.min(i, state.matches.length - 1));
+  state.fixIdx = i;
+  $("fixcard").classList.add("open");
+  if(!noScroll){
+    scrollToMatch(state.matches[i]);
+    try{ ta.setSelectionRange(state.matches[i].offset, state.matches[i].offset + state.matches[i].length); }catch(e){}
+  }
+  renderFix(); renderPanel();
+}
+function closeFix(){
+  $("fixcard").classList.remove("open");
+  if(state.fixIdx >= 0){ state.fixIdx = -1; renderPanel(); }
+  if(state.pendingRecheck){ state.pendingRecheck = false; check(); }
+}
+
+/* ---------------- 选中即收藏 ---------------- */
+function caretPos(offset){
+  const cs = getComputedStyle(ta);
+  const d = document.createElement("div");
+  d.style.cssText = [
+    "position:absolute", "visibility:hidden", "top:0", "left:-99999px",
+    "box-sizing:border-box", "white-space:pre-wrap", "word-break:break-word", "overflow-wrap:break-word",
+    "width:" + ta.clientWidth + "px",
+    "font-family:" + cs.fontFamily, "font-size:" + cs.fontSize, "font-weight:" + cs.fontWeight,
+    "line-height:" + cs.lineHeight, "letter-spacing:" + cs.letterSpacing,
+    "padding:" + cs.padding
+  ].join(";");
+  d.appendChild(document.createTextNode(ta.value.slice(0, offset)));
+  const span = document.createElement("span");
+  span.textContent = ta.value.slice(offset, offset + 1) || ".";
+  d.appendChild(span);
+  document.body.appendChild(d);
+  const dr = d.getBoundingClientRect(), sr = span.getBoundingClientRect();
+  const out = {left: sr.left - dr.left, top: sr.top - dr.top};
+  d.remove();
+  return out;
+}
+function hideSelBar(){ $("selbar").classList.remove("open"); state.selWord = ""; }
+function showSelBar(){
+  const a = ta.selectionStart, b = ta.selectionEnd;
+  if(a === b){ hideSelBar(); return; }
+  const raw = ta.value.slice(a, b).trim();
+  if(!raw || raw.length > 40 || /\n/.test(raw) || !/[A-Za-z\u4e00-\u9fff]/.test(raw)){ hideSelBar(); return; }
+  state.selWord = raw;
+  const bar = $("selbar");
+  bar.classList.add("open");
+  $("selFav").textContent = "＋ 收藏「" + (raw.length > 12 ? raw.slice(0, 12) + "…" : raw) + "」";
+  const wr = $("dropZone").getBoundingClientRect(), tr = ta.getBoundingClientRect();
+  const pos = caretPos(a);
+  let left = tr.left - wr.left + pos.left;
+  let top = tr.top - wr.top + pos.top - ta.scrollTop - 36;
+  if(top < 4) top = tr.top - wr.top + pos.top - ta.scrollTop + 26;
+  left = Math.max(6, Math.min(left, wr.width - bar.offsetWidth - 6));
+  top = Math.max(4, Math.min(top, wr.height - bar.offsetHeight - 6));
+  bar.style.left = Math.round(left) + "px";
+  bar.style.top = Math.round(top) + "px";
+}
+
+/* ---------------- 修改动作 ---------------- */
+function pushUndo(){
+  state.undoStack.push(ta.value);
+  if(state.undoStack.length > 60) state.undoStack.shift();
+  if(state.baseline == null) state.baseline = ta.value;
+}
+function recordChange(from, to, rule){
+  state.changes.push({from, to, rule});
+  if(state.changes.length > 200) state.changes.shift();
 }
 function applyMatch(i, value){
   const m = state.matches[i];
   if(!m) return;
-  ta.value = ta.value.slice(0, m.offset) + value + ta.value.slice(m.offset + m.length);
+  const before = ta.value;
+  const from = before.slice(m.offset, m.offset + m.length);
+  const delta = value.length - m.length;
+  const next = state.matches[i + 1];
+  pushUndo();
+  ta.value = before.slice(0, m.offset) + value + before.slice(m.offset + m.length);
+  recordChange(from, value, ridOf(m));
+  state.programmatic = true;
+  state.pendingFix = next ? next.offset + delta : null;
+  saveDraft();
   check();
 }
-$("ltDot").addEventListener("click", ()=> $("pop").classList.contains("open") ? closePop() : openPop(popIdx));
-$("popClose").addEventListener("click", closePop);
-$("popPrev").addEventListener("click", ()=>{ popIdx = Math.max(0, popIdx-1); renderPop(); });
-$("popNext").addEventListener("click", ()=>{ popIdx = Math.min(state.matches.length-1, popIdx+1); renderPop(); });
-$("popFixAll").addEventListener("click", ()=>{
-  const ms = [...state.matches].sort((a,b)=>b.offset-a.offset);   // 从后往前替换，避免偏移位移
-  let text = ta.value; const used = new Set();
+function ignoreOnce(i){
+  const m = state.matches[i];
+  if(!m) return;
+  state.ignoredOnce.push(m);
+  state.matches.splice(i, 1);
+  if(state.matches.length) openFix(Math.min(i, state.matches.length - 1));
+  else closeFix();
+  render();
+}
+function restoreDeferred(){
+  if(!state.ignoredOnce.length) return;
+  state.matches = state.matches.concat(state.ignoredOnce).sort((a,b) => a.offset - b.offset);
+  state.ignoredOnce = [];
+  render(); toast("已恢复跳过的问题");
+}
+function buildApplyPlan(){
+  const ms = [...state.matches].sort((a, b) => b.offset - a.offset);
+  let text = ta.value;
+  const used = new Set(), plan = [];
   for(const m of ms){
     if(!m.replacements || !m.replacements.length) continue;
     const key = m.offset + ":" + m.length;
     if(used.has(key) || m.offset < 0 || m.offset + m.length > text.length) continue;
     used.add(key);
+    const from = text.slice(m.offset, m.offset + m.length);
     text = text.slice(0, m.offset) + m.replacements[0].value + text.slice(m.offset + m.length);
+    plan.push({from, to: m.replacements[0].value, rule: ridOf(m)});
   }
-  ta.value = text; check();
-});
-/* 点正文里的下划线词，浮层直接定位到该错误 */
-ta.addEventListener("click", ()=>{
-  setTimeout(()=>{
-    const pos = ta.selectionStart;
-    const i = state.matches.findIndex(m => typeof m.offset==="number" && pos>=m.offset && pos<=m.offset+m.length);
-    if(i >= 0){ popIdx = i; openPop(i); }
-  }, 0);
-});
+  return {text, plan};
+}
+function previewApply(){
+  const {text, plan} = buildApplyPlan();
+  if(!plan.length){ toast("没有可自动应用的建议，逐条处理吧"); return; }
+  state.applyPlan = {text, plan};
+  $("applyCnt").textContent = plan.length + " 处";
+  $("applyBody").innerHTML =
+    plan.slice(0, 40).map(c =>
+      `<div class="chg"><span class="from">${esc(c.from) || "（空）"}</span><span>→</span>
+        <span class="to">${esc(c.to) || "（删除）"}</span><span class="rule">${esc(c.rule)}</span></div>`).join("")
+    + (plan.length > 40 ? `<div class="hint">另有 ${plan.length - 40} 处未列出</div>` : "")
+    + `<div class="hint" style="text-align:left">确认后仍可「撤销一步」或「还原全文」。</div>`;
+  openModal("applyModal");
+}
+function applyConfirmed(){
+  const p = state.applyPlan;
+  if(!p) return;
+  pushUndo();
+  ta.value = p.text;
+  for(const c of p.plan) recordChange(c.from, c.to, c.rule);
+  state.programmatic = true; state.pendingFix = null;
+  closeModal("applyModal"); saveDraft(); check();
+  toast("已应用 " + p.plan.length + " 处建议");
+}
+function undo(){
+  if(!state.undoStack.length){ toast("没有可撤销的修改"); return; }
+  ta.value = state.undoStack.pop();
+  state.programmatic = false;
+  saveDraft(); check();
+  toast("已撤销一步");
+}
+function revertAll(){
+  if(state.baseline == null) return;
+  pushUndo();
+  ta.value = state.baseline;
+  state.changes = [];
+  saveDraft(); check();
+  toast("已还原到本次修改前");
+}
+function gotoMatch(i){ openFix(i); }
 
-/* ---------- 交互 ---------- */
-ta.addEventListener("input", scheduleCheck);
-ta.addEventListener("scroll", ()=>{ backdrop.scrollTop = ta.scrollTop; });
-$("checkNow").addEventListener("click", check);
-["lang","level","auto","motherTongue","preferredVariants","enabledOnly","enabledRules"]
-  .forEach(id=>$(id).addEventListener("change", ()=>{ savePrefs(); check(); }));
-$("serverUrl").addEventListener("change", ()=>{ savePrefs(); state.disabledRules.clear(); state.disabledCategories.clear(); renderChips(); loadLanguages(); });
-$("theme").addEventListener("change", ()=>{ savePrefs(); applyTheme(); });
+/* ---------------- 导出 ---------------- */
+function reportMarkdown(){
+  const text = ta.value;
+  const lines = [];
+  lines.push("# 校对报告", "");
+  lines.push("- 生成时间：" + new Date().toLocaleString());
+  lines.push("- 语言：" + ($("auto").checked ? "自动检测" : $("lang").value) + " · 级别：" + $("level").selectedOptions[0].textContent);
+  lines.push("- 字符数：" + text.length + " · 问题数：" + state.matches.length);
+  lines.push("", "## 正文", "", "```", text, "```", "");
+  if(state.matches.length){
+    lines.push("## 问题清单", "", "| # | 类型 | 规则 | 原文 | 建议 | 说明 |", "|---|---|---|---|---|---|");
+    state.matches.forEach((m, i) => {
+      const ctx = m.context || {};
+      const word = String(ctx.text||"").slice(ctx.offset, ctx.offset + ctx.length).replace(/\|/g, "\\|").replace(/\n/g, " ");
+      const reps = (m.replacements || []).slice(0, 3).map(r => r.value).join(" / ").replace(/\|/g, "\\|") || "—";
+      lines.push(`| ${i+1} | ${TYPE_LABEL[typeOf(m)]} | ${(m.rule && m.rule.id) || ""} | ${word || "—"} | ${reps} | ${String(m.message||"").replace(/\|/g,"\\|")} |`);
+    });
+  }
+  if(state.changes.length){
+    lines.push("", "## 已应用修改", "");
+    state.changes.forEach((c, i) => lines.push(`${i+1}. \`${c.from}\` → \`${c.to}\`  （${c.rule}）`));
+  }
+  return lines.join("\n");
+}
 
-/* 快捷键：Ctrl/⌘+Enter 立即检查；Esc 关浮层；浮层打开时 ←/→ 或 Alt+←/→ 切换 */
-document.addEventListener("keydown", e=>{
-  if(e.key === "Escape" && $("pop").classList.contains("open")){ closePop(); }
-  else if((e.metaKey || e.ctrlKey) && e.key === "Enter"){ e.preventDefault(); check(); }
-  else if($("pop").classList.contains("open") && (e.key === "ArrowLeft" || e.key === "ArrowRight")
-          && (e.altKey || document.activeElement !== ta)){
-    e.preventDefault();
-    if(e.key === "ArrowLeft") $("popPrev").click(); else $("popNext").click();
+/* ---------------- 规则浏览器 ---------------- */
+function renderRuleBrowser(){
+  const cats = [...state.catNames.entries()].sort((a,b)=>a[1].localeCompare(b[1]));
+  const sel = $("ruleCat");
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">全部分类</option>' +
+    cats.map(([id, name]) => `<option value="${esc(id)}">${esc(name)}</option>`).join("");
+  sel.value = cats.some(c => c[0] === prev) ? prev : "";
+  $("ruleCount").textContent = state.rules.length ? state.rules.length + " 条" : "–";
+  renderRuleList();
+}
+function renderRuleList(){
+  const q = $("ruleSearch").value.trim().toLowerCase();
+  const cat = $("ruleCat").value;
+  let rows = state.rules;
+  if(cat) rows = rows.filter(r => r.categoryId === cat);
+  if(q) rows = rows.filter(r => (r.ruleId + " " + r.description + " " + (r.categoryName||"")).toLowerCase().includes(q));
+  $("ruleShown").textContent = rows.length + " 条";
+  if(!rows.length){
+    $("ruleList").innerHTML = '<div class="hint">没有匹配的规则。</div>';
+    return;
   }
-});
+  const shown = rows.slice(0, 200);
+  $("ruleList").innerHTML = shown.map(r => `
+    <div class="rulerow">
+      <span class="rid">${esc(r.ruleId)}</span>
+      <span class="desc" title="${esc(r.description)}">${esc(r.description)}</span>
+      <span class="cat">${esc(r.categoryName || "")}</span>
+      <span class="acts">
+        <button data-rule-ignore="${esc(r.ruleId)}" type="button">忽略</button>
+        <button data-rule-only="${esc(r.ruleId)}" type="button">只启用它</button>
+      </span>
+    </div>`).join("") +
+    (rows.length > 200 ? `<div class="hint">仅显示前 200 条，用搜索缩小范围。</div>` : "");
+}
 
-$("matchList").addEventListener("click", e=>{
-  const catBtn = e.target.closest("[data-cat]");
-  if(catBtn && catBtn.dataset.cat){
-    state.disabledCategories.add(catBtn.dataset.cat); saveSets(); renderChips(); check(); return;
-  }
-  const dictBtn = e.target.closest("[data-dictword]");
-  if(dictBtn && dictBtn.dataset.dictword){
-    state.localDict.add(dictBtn.dataset.dictword.trim().toLowerCase()); saveSets(); renderChips(); check(); return;
-  }
-  const fix = e.target.closest(".fix");
-  if(fix){
-    const m = state.matches[+fix.dataset.i];
-    const v = fix.dataset.v;
-    ta.value = ta.value.slice(0, m.offset) + v + ta.value.slice(m.offset + m.length);
-    check(); return;
-  }
-  const ig = e.target.closest(".ignore");
-  if(ig && ig.dataset.rule){
-    state.disabledRules.add(ig.dataset.rule); renderChips(); check();
-  }
-});
+/* ---------------- 分类选择器 ---------------- */
+function renderCatPicker(){
+  const box = $("catPick");
+  const cats = [...state.catNames.entries()].sort((a,b)=>a[1].localeCompare(b[1]));
+  if(!cats.length){ box.innerHTML = '<span class="f" style="color:var(--muted)">选择语言后加载分类。</span>'; return; }
+  box.innerHTML = cats.map(([id, name]) =>
+    `<label title="${esc(id)}"><input type="checkbox" data-cat-pick="${esc(id)}" ${state.enabledCategories.has(id) ? "checked" : ""}>
+      ${esc(name)}</label>`).join("");
+}
+
 function renderChips(){
   renderChipBox($("disabledChips"), state.disabledRules, "rule");
   renderChipBox($("disabledCatChips"), state.disabledCategories, "cat");
@@ -619,29 +1413,343 @@ function renderChips(){
 }
 function renderChipBox(box, set, kind){
   if(!set.size){ box.innerHTML = '<span class="f" style="color:var(--muted)">（无）</span>'; return; }
-  box.innerHTML = [...set].map(v=>
-    `<span class="chip">${esc(v)}<button type="button" data-kind="${kind}" data-v="${esc(v)}" aria-label="移除">✕</button></span>`).join("");
-  box.querySelectorAll("button").forEach(b=>b.addEventListener("click", ()=>{
+  box.innerHTML = [...set].map(v => {
+    const label = kind === "cat" ? (state.catNames.get(v) || v) : v;
+    return `<span class="chip">${esc(label)}<button type="button" data-kind="${kind}" data-v="${esc(v)}" aria-label="移除">✕</button></span>`;
+  }).join("");
+  box.querySelectorAll("button").forEach(b => b.addEventListener("click", () => {
     const s = b.dataset.kind === "rule" ? state.disabledRules
-            : b.dataset.kind === "cat"  ? state.disabledCategories : state.localDict;
+            : b.dataset.kind === "cat" ? state.disabledCategories : state.localDict;
     s.delete(b.dataset.v); saveSets(); renderChips(); check();
   }));
 }
 
-$("sampleEn").addEventListener("click", ()=>{
-  ta.value = "She don't know wether he recieved there package or not. We discussed about it, and made a big progress yesterday.";
-  check();
-});
-$("sampleZh").addEventListener("click", ()=>{
-  ta.value = "他们上个月定婚了，昨天我去他家作客。今天天起真好，我们一起去公圆散步吧。";
-  check();
+/* ---------------- 事件绑定 ---------------- */
+$("countBadge").addEventListener("click", () => {
+  if(state.bankView) switchView("review");
+  if(state.matches.length) openFix(0);
 });
 
-/* ---------- 启动 ---------- */
-loadSets(); renderChips();
-if(prefs.theme){ $("theme").value = prefs.theme; }
+$("bankBtn").addEventListener("click", () => {
+  if(state.bankView) switchView("review"); else openBank();
+});
+
+/* 面板：审阅 / 词库 */
+function switchView(v){
+  state.bankView = v === "bank";
+  $("viewReview").hidden = state.bankView;
+  $("viewBank").hidden = !state.bankView;
+  [...$("panelSeg").children].forEach(b => b.classList.toggle("on", (b.dataset.view === "bank") === state.bankView));
+  $("panelFixAll").style.display = state.bankView ? "none" : "";
+  if(state.bankView){ closeFix(); hideSelBar(); renderBank(); }
+}
+$("panelSeg").addEventListener("click", e => {
+  const b = e.target.closest("[data-view]");
+  if(b) switchView(b.dataset.view);
+});
+$("bankSearch").addEventListener("input", renderBank);
+$("bankWl").addEventListener("change", () => {
+  const on = $("bankWl").checked;
+  state.wordbank.forEach(x => { x.wl = on; });
+  saveBank(); syncWhitelist(); renderChips(); check(); toast(on ? "词库的词不再报拼写错误" : "词库的词恢复参与拼写检查");
+});
+$("bankList").addEventListener("click", e => {
+  const d = e.target.closest("[data-del]");
+  if(d){ removeWord(d.dataset.del); toast("已从词库移除「" + d.dataset.del + "」"); }
+});
+$("bankList").addEventListener("change", e => {
+  const n = e.target.closest("[data-note]");
+  if(!n) return;
+  const w = n.dataset.note;
+  const item = state.wordbank.find(x => x.w === w);
+  if(item){ item.note = n.value.trim(); saveBank(); toast("备注已保存"); }
+});
+$("bankExport").addEventListener("click", () => {
+  if(!state.wordbank.length){ toast("词库是空的"); return; }
+  download("my-wordbank-" + Date.now() + ".json", JSON.stringify(state.wordbank, null, 2), "application/json");
+  toast("已导出 " + state.wordbank.length + " 个词");
+});
+$("bankImportBtn").addEventListener("click", () => $("bankImportFile").click());
+$("bankImportFile").addEventListener("change", e => {
+  const f = e.target.files && e.target.files[0];
+  if(!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try{
+      const arr = JSON.parse(String(r.result || "[]"));
+      if(!Array.isArray(arr)) throw new Error("格式不对");
+      let added = 0;
+      for(const x of arr){
+        const w = String((x && (x.w || x.word)) || "").trim();
+        if(!w) continue;
+        if(state.wordbank.some(y => y.w.toLowerCase() === w.toLowerCase())) continue;
+        state.wordbank.push({w, note: String(x.note || ""), at: x.at || Date.now(), wl: x.wl !== false});
+        added++;
+      }
+      saveBank(); syncWhitelist(); renderBank(); renderChips();
+      toast("导入了 " + added + " 个词");
+    }catch(err){ toast("导入失败：" + err.message); }
+  };
+  r.readAsText(f, "utf-8");
+  e.target.value = "";
+});
+$("bankClear").addEventListener("click", () => {
+  if(!state.wordbank.length) return;
+  if(!confirm("清空整个词库？这个操作不能撤销。")) return;
+  state.wordbank = []; saveBank(); syncWhitelist(); renderBank(); renderChips(); check();
+  toast("词库已清空");
+});
+
+/* 选中文字 → 收藏浮条 */
+$("selbar").addEventListener("mousedown", e => e.preventDefault());
+$("selFav").addEventListener("click", () => {
+  const w = state.selWord;
+  hideSelBar();
+  if(w) addWord(w);
+});
+ta.addEventListener("mouseup", () => setTimeout(showSelBar, 0));
+ta.addEventListener("keyup", e => {
+  if(e.shiftKey || e.key.indexOf("Arrow") === 0) setTimeout(showSelBar, 0);
+});
+$("fcPrev").addEventListener("click", () => openFix(state.fixIdx - 1));
+$("fcNext").addEventListener("click", () => openFix(state.fixIdx + 1));
+$("fcOnce").addEventListener("click", () => ignoreOnce(state.fixIdx));
+$("fcFav").addEventListener("click", () => {
+  const m = state.matches[state.fixIdx];
+  if(!m) return;
+  const w = ta.value.slice(m.offset, m.offset + m.length) || flaggedWord(m);
+  if(addWord(w, "", {silent: true, noCheck: true})) renderFix();
+  const note = $("fcNote");
+  if(note && !$("fcSaved").hidden) setTimeout(() => note.focus(), 30);
+});
+$("fcNote").addEventListener("change", () => {
+  const w = $("fcNote").dataset.w;
+  const item = state.wordbank.find(x => x.w === w);
+  if(item){ item.note = $("fcNote").value.trim(); saveBank(); toast("备注已保存"); }
+});
+$("fcOpenBank").addEventListener("click", () => openBank());
+$("fcIgnore").addEventListener("click", () => {
+  const m = state.matches[state.fixIdx];
+  if(!m) return;
+  const rid = ridOf(m);
+  state.disabledRules.add(rid); saveSets(); renderChips(); toast("已永久忽略 " + rid);
+  check();
+});
+$("fcReps").addEventListener("click", e => {
+  const b = e.target.closest("[data-rep]");
+  if(!b) return;
+  const m = state.matches[state.fixIdx];
+  if(m && m.replacements[+b.dataset.rep]) applyMatch(state.fixIdx, m.replacements[+b.dataset.rep].value);
+});
+$("panelFixAll").addEventListener("click", previewApply);
+$("applyConfirm").addEventListener("click", applyConfirmed);
+$("deferredBar").addEventListener("click", e => { if(e.target.closest("#restoreBtn")) restoreDeferred(); });
+$("undoBtn").addEventListener("click", e => { e.stopPropagation(); undo(); });
+$("revertAllBtn").addEventListener("click", e => { e.stopPropagation(); revertAll(); });
+
+ta.addEventListener("input", () => {
+  state.programmatic = false;
+  if(state.fixIdx >= 0) closeFix();   /* 一开始打字就退出审阅态，别让卡片乱飘 */
+  hideSelBar();
+  saveDraft(); scheduleCheck();
+});
+ta.addEventListener("scroll", () => { backdrop.scrollTop = ta.scrollTop; hideSelBar(); });
+$("checkNow").addEventListener("click", check);
+["lang","level","auto","motherTongue","preferredVariants","mode","enabledOnly","enabledRules","chunkSize","skipCode"]
+  .forEach(id => $(id).addEventListener("change", () => {
+    savePrefs();
+    if(id === "lang" || id === "auto") loadConfig($("lang").value);
+    check();
+  }));
+$("serverUrl").addEventListener("change", () => {
+  savePrefs(); state.disabledRules.clear(); state.disabledCategories.clear();
+  state.enabledCategories.clear(); renderChips(); connect();
+});
+$("catWhitelist").addEventListener("change", () => { savePrefs(); renderCatPicker(); check(); });
+$("catPick").addEventListener("change", e => {
+  const cb = e.target.closest("[data-cat-pick]");
+  if(!cb) return;
+  const id = cb.dataset.catPick;
+  if(cb.checked) state.enabledCategories.add(id); else state.enabledCategories.delete(id);
+  saveSets(); check();
+});
+$("theme").addEventListener("change", () => { savePrefs(); applyTheme(); });
+$("clearDraft").addEventListener("click", () => {
+  try{ localStorage.removeItem(DRAFT_KEY); }catch(e){}
+  ta.value = ""; state.changes = []; state.undoStack = []; state.baseline = null;
+  state.ignoredOnce = []; closeFix(); check(); toast("草稿已清空");
+});
+
+/* 审阅面板交互 */
+$("tabs").addEventListener("click", e => {
+  const b = e.target.closest("[data-tab]");
+  if(!b) return;
+  state.tab = b.dataset.tab;
+  render();
+  if(state.fixIdx >= 0) renderFix();
+});
+$("matchList").addEventListener("click", e => {
+  const fix = e.target.closest(".fix");
+  if(fix){ e.stopPropagation(); applyMatch(+fix.dataset.i, state.matches[+fix.dataset.i].replacements[+fix.dataset.k].value); return; }
+  const once = e.target.closest("[data-once]");
+  if(once){ e.stopPropagation(); ignoreOnce(+once.dataset.once); return; }
+  const ig = e.target.closest("[data-ignore]");
+  if(ig){ e.stopPropagation(); state.disabledRules.add(ig.dataset.ignore); saveSets(); renderChips(); check(); return; }
+  const ic = e.target.closest("[data-ignorecat]");
+  if(ic){ e.stopPropagation(); state.disabledCategories.add(ic.dataset.ignorecat); saveSets(); renderChips(); check(); return; }
+  const dw = e.target.closest("[data-dict]");
+  if(dw){ e.stopPropagation(); addWord(dw.dataset.dict); return; }
+  const card = e.target.closest(".match");
+  if(card) openFix(+card.dataset.i);
+});
+
+/* 点正文里的下划线词 → 就地弹卡 */
+ta.addEventListener("click", () => {
+  setTimeout(() => {
+    const pos = ta.selectionStart;
+    const i = state.matches.findIndex(m => typeof m.offset === "number" && pos >= m.offset && pos <= m.offset + m.length);
+    if(i >= 0) openFix(i, true);
+    else closeFix();
+  }, 0);
+});
+
+/* 点空白处收起纠错卡 */
+document.addEventListener("mousedown", e => {
+  if(!e.target.closest("#selbar") && !e.target.closest("#dropZone")) hideSelBar();
+  if(!$("fixcard").classList.contains("open")) return;
+  if(e.target.closest("#fixcard") || e.target.closest("#dropZone") ||
+     e.target.closest("#matchList") || e.target.closest("#countBadge")) return;
+  closeFix();
+});
+
+/* 规则浏览器交互 */
+$("ruleSearch").addEventListener("input", renderRuleList);
+$("ruleCat").addEventListener("change", renderRuleList);
+$("ruleList").addEventListener("click", e => {
+  const a = e.target.closest("[data-rule-ignore]");
+  if(a){ state.disabledRules.add(a.dataset.ruleIgnore); saveSets(); renderChips(); check(); toast("已忽略 " + a.dataset.ruleIgnore); return; }
+  const b = e.target.closest("[data-rule-only]");
+  if(b){
+    $("enabledOnly").checked = true; $("enabledRules").value = b.dataset.ruleOnly;
+    savePrefs(); check(); toast("已切换为仅检查 " + b.dataset.ruleOnly);
+  }
+});
+
+/* 导入 / 拖拽 */
+$("importBtn").addEventListener("click", () => $("fileInput").click());
+$("fileInput").addEventListener("change", e => {
+  const f = e.target.files && e.target.files[0];
+  if(f) readFile(f);
+  e.target.value = "";
+});
+function readFile(f){
+  if(f.size > 2 * 1024 * 1024){ toast("文件超过 2MB，先切一段再试"); return; }
+  const r = new FileReader();
+  r.onload = () => {
+    let t = String(r.result || "");
+    if(/\.html?$/i.test(f.name)) t = t.replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<style[\s\S]*?<\/style>/gi, " ")
+      .replace(/<[^>]+>/g, " ").replace(/\n{3,}/g, "\n\n");
+    ta.value = t.trim();
+    state.changes = []; state.undoStack = []; state.baseline = null;
+    saveDraft(); check(); toast("已导入 " + f.name);
+  };
+  r.readAsText(f, "utf-8");
+}
+const dz = $("dropZone");
+["dragenter","dragover"].forEach(t => dz.addEventListener(t, e => { e.preventDefault(); dz.classList.add("drag"); }));
+["dragleave","drop"].forEach(t => dz.addEventListener(t, e => { e.preventDefault(); if(t === "dragleave" && e.target !== dz) return; dz.classList.remove("drag"); }));
+dz.addEventListener("drop", e => {
+  const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+  if(f) readFile(f);
+  else if(e.dataTransfer) { const t = e.dataTransfer.getData("text"); if(t){ ta.value = t; check(); } }
+});
+
+/* 复制 / 下载 / 报告 */
+$("copyBtn").addEventListener("click", async () => {
+  try{ await navigator.clipboard.writeText(ta.value); toast("已复制当前全文"); }
+  catch(e){ ta.select(); document.execCommand("copy"); toast("已复制"); }
+});
+$("downloadBtn").addEventListener("click", () => {
+  download("proofread-" + Date.now() + ".txt", ta.value);
+  toast("已下载 .txt");
+});
+$("reportBtn").addEventListener("click", () => {
+  download("proofread-report-" + Date.now() + ".md", reportMarkdown(), "text/markdown;charset=utf-8");
+  toast("已导出 Markdown 报告");
+});
+
+/* 示例 */
+const SAMPLES = {
+  en: "She don't know wether he recieved there package or not. We discussed about it, and made a big progress yesterday. The report were sended to all of the team members, but nobody haven't reply it yet.",
+  zh: "他们上个月定婚了，昨天我去他家作客。今天天起真好，我们一起去公圆散步吧。这个方案我们已经讨论过了,但是还没有的到最终结论。"
+};
+$("sampleSel").addEventListener("change", e => {
+  const k = e.target.value;
+  if(!k) return;
+  ta.value = SAMPLES[k];
+  state.changes = []; state.undoStack = []; state.baseline = null;
+  saveDraft(); check();
+  e.target.value = "";
+});
+
+/* 弹窗与快捷键 */
+function openModal(id){ $(id).classList.add("open"); }
+function closeModal(id){ $(id).classList.remove("open"); }
+$("helpBtn").addEventListener("click", () => openModal("helpModal"));
+document.addEventListener("click", e => {
+  const c = e.target.closest("[data-close]");
+  if(c) closeModal(c.dataset.close);
+  if(e.target.classList.contains("modal")) e.target.classList.remove("open");
+});
+document.addEventListener("keydown", e => {
+  const typing = document.activeElement === ta;
+  const cardOpen = $("fixcard").classList.contains("open");
+  if(e.key === "Escape"){
+    const open = document.querySelector(".modal.open");
+    if(open) open.classList.remove("open");
+    else if(cardOpen) closeFix();
+    return;
+  }
+  if((e.metaKey || e.ctrlKey) && e.key === "Enter"){ e.preventDefault(); check(); return; }
+  if((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z" && !e.shiftKey && state.programmatic){
+    e.preventDefault(); undo(); return;
+  }
+  if(e.altKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")){
+    if(!state.matches.length) return;
+    e.preventDefault();
+    openFix(cardOpen ? state.fixIdx + (e.key === "ArrowRight" ? 1 : -1) : 0);
+    return;
+  }
+  if(e.altKey && e.key === "Enter"){
+    if(!cardOpen) return;
+    const m = state.matches[state.fixIdx];
+    if(m && m.replacements && m.replacements.length){
+      e.preventDefault(); applyMatch(state.fixIdx, m.replacements[0].value);
+    }
+    return;
+  }
+  if(e.key === "?" && !typing){ e.preventDefault(); openModal("helpModal"); }
+});
+
+/* ---------------- 启动 ---------------- */
+loadSets(); loadBank(); renderChips(); renderBank();
+if(prefs.theme) $("theme").value = prefs.theme;
 applyTheme();
-loadLanguages().then(()=>{ ta.value = "She don't know wether he recieved there package or not. We discussed about it, and made a big progress yesterday."; check(); });
+$("ruleCount").textContent = "–";
+
+(async function boot(){
+  await connect();
+  let draft = "";
+  try{ draft = localStorage.getItem(DRAFT_KEY) || ""; }catch(e){}
+  if(draft.trim()){
+    ta.value = draft;
+    render(); check();
+  }else{
+    ta.value = SAMPLES.en;
+    render();
+    check().then(() => showBanner("这是示例文本：点任意带下划线的词，纠错卡会就地弹出。删掉换成你自己的内容即可。", "info"));
+  }
+})();
 </script>
 </body>
 </html>

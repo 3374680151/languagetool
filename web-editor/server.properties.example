@@ -1,0 +1,67 @@
+# LanguageTool 服务端配置模板
+# 用法：java -cp languagetool-server.jar org.languagetool.server.HTTPServer \
+#         --port 8081 --public --config server.properties --allow-origin https://你的域名
+# 改哪一行就放开哪一行（# 开头是注释）。
+
+# ---------- 文本长度 ----------
+# 单次请求文本上限，超过直接报错。默认不限制（2147483647）。
+# 前端「高级设置 → 长文分段大小」建议设成同一个值，超长文会自动切片。
+maxTextLength=20000
+# 硬上限，即使带特殊 token 也突破不了。
+maxTextHardLength=50000
+# 单次检查耗时上限（毫秒），超时中断，防止一条请求拖死服务。
+maxCheckTimeMillis=60000
+# 每词错误率超过该值就中止（防恶意文本）。
+# maxErrorsPerWordRate=0.5
+# 拼写错误最多给几条建议（仅 Hunspell 系语言），纯性能项。
+maxSpellingSuggestions=5
+
+# ---------- 并发与缓存 ----------
+# 并行检查线程数，建议 = CPU 核数。
+maxCheckThreads=8
+# 句子级缓存条数，0 表示关闭（默认）。
+cacheSize=10000
+# 缓存存活秒数，设了 cacheSize 时默认 300。
+cacheTTLSeconds=300
+# 缓存内部处理链，重复请求多的场景提升明显。
+pipelineCaching=true
+maxPipelinePoolSize=100
+pipelineExpireTimeInSeconds=3600
+# 启动时预热（启动变慢，首个请求变快）。长驻服务建议开。
+# pipelinePrewarming=true
+# 排队请求超过这个数直接拒绝。
+maxWorkQueueSize=200
+
+# ---------- 限流与安全 ----------
+# 每个周期内每 IP 的请求数上限。
+requestLimit=120
+# 周期长度（秒）。
+requestLimitPeriodInSeconds=60
+# 同周期内字节总量上限。
+# requestLimitInBytes=5000000
+# 超时请求数上限。
+# timeoutRequestLimit=10
+# 在 Nginx/Caddy 反代后面时打开，按 X-Forwarded-For 的真实 IP 限流，
+# 否则所有用户共用一个额度。
+# trustXForwardForHeader=true
+# 屏蔽的 Referer / Origin，逗号分隔。
+# blockedReferrers=https://bad-site.example
+# 服务端层面全局关掉某些规则（比前端忽略更彻底）。
+# disabledRuleIds=WHITESPACE_RULE,EN_QUOTES
+# 只启用 premium 规则。
+# premiumOnly=false
+
+# ---------- 语言模型（可选，英文混淆词准确率提升明显） ----------
+# 目录下需有 1grams/2grams/3grams 三个子目录，每个是一个 Lucene 索引。
+# languageModel=/Users/wang/tools/ngram-en
+# 更好的语种检测（多语混写场景）。
+# fasttextModel=/path/to/lid.176.bin
+# fasttextBinary=/path/to/fasttext
+
+# ---------- 规则开关文件 ----------
+# 按项目批量控制规则，格式见官方 .languagetool.cfg。
+# rulesFile=/path/to/.languagetool.cfg
+
+# ---------- 给 LT 不支持的语言加「只查拼写」 ----------
+# lang-tr=Turkish
+# lang-tr-dictPath=/path/to/tr.dic
