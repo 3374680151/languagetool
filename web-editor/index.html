@@ -1,0 +1,647 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LanguageTool 网页校对编辑器</title>
+<style>
+:root{
+  --bg:#f5f6fa; --card:#ffffff; --fg:#1b1e2b; --muted:#6b7280; --border:#e3e6ee;
+  --accent:#4f46e5; --accent-soft:#eef0fe; --accent-fg:#ffffff;
+  --red:#dc2626; --orange:#d97706; --purple:#7c3aed; --blue:#2563eb; --gray:#64748b;
+  --shadow:0 1px 3px rgba(16,20,40,.06),0 8px 24px rgba(16,20,40,.05);
+}
+:root[data-theme="dark"]{
+  --bg:#13151d; --card:#1c1f2a; --fg:#e9ebf3; --muted:#9aa2b4; --border:#2b2f3d;
+  --accent:#818cf8; --accent-soft:#252840; --accent-fg:#101322;
+  --red:#f87171; --orange:#fbbf24; --purple:#c4b5fd; --blue:#60a5fa; --gray:#94a3b8;
+  --shadow:0 1px 3px rgba(0,0,0,.4);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#13151d; --card:#1c1f2a; --fg:#e9ebf3; --muted:#9aa2b4; --border:#2b2f3d;
+    --accent:#818cf8; --accent-soft:#252840; --accent-fg:#101322;
+    --red:#f87171; --orange:#fbbf24; --purple:#c4b5fd; --blue:#60a5fa; --gray:#94a3b8;
+    --shadow:0 1px 3px rgba(0,0,0,.4);
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);
+  font:15px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;}
+.wrap{max-width:960px;margin:0 auto;padding:24px 16px 60px}
+header{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.logo{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#6366f1,#a855f7);
+  display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:15px;flex:none}
+h1{font-size:19px;margin:0;font-weight:600}
+.sub{color:var(--muted);font-size:12.5px;margin-top:1px}
+.status{margin-left:auto;display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted);
+  background:var(--card);border:1px solid var(--border);border-radius:99px;padding:5px 12px}
+.dot{width:8px;height:8px;border-radius:99px;background:var(--gray);flex:none}
+.dot.ok{background:#22c55e}.dot.bad{background:var(--red)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow)}
+.toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 14px;border-bottom:1px solid var(--border)}
+label.f{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
+select,input[type=text]{font:inherit;font-size:13.5px;color:var(--fg);background:var(--bg);
+  border:1px solid var(--border);border-radius:8px;padding:6px 9px;outline:none}
+select:focus,input[type=text]:focus{border-color:var(--accent)}
+.switch{position:relative;width:36px;height:20px;flex:none;cursor:pointer}
+.switch input{opacity:0;width:100%;height:100%;position:absolute;margin:0;cursor:pointer}
+.switch i{position:absolute;inset:0;background:var(--border);border-radius:99px;transition:.15s;pointer-events:none}
+.switch i::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:99px;background:#fff;transition:.15s;box-shadow:0 1px 2px rgba(0,0,0,.25)}
+.switch input:checked + i{background:var(--accent)}
+.switch input:checked + i::after{transform:translateX(16px)}
+.btn{font:inherit;font-size:13.5px;color:var(--fg);background:var(--card);border:1px solid var(--border);
+  border-radius:8px;padding:6px 13px;cursor:pointer}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg);font-weight:500}
+.btn.primary:hover{opacity:.9;color:var(--accent-fg)}
+.btn.mini{font-size:12.5px;padding:3px 10px;border-radius:99px}
+/* 编辑器：textarea 叠加高亮层 */
+.editor-wrap{position:relative}
+.backdrop{position:absolute;inset:0;overflow:hidden;pointer-events:none;border-radius:0 0 13px 13px}
+.backdrop .hl-layer,#input{
+  font:15px/1.8 "SF Mono",ui-monospace,Menlo,Consolas,"PingFang SC","Microsoft YaHei",monospace;
+  padding:16px 18px;white-space:pre-wrap;word-break:break-word;overflow-wrap:break-word;letter-spacing:0}
+#input{display:block;width:100%;min-height:280px;max-height:520px;resize:vertical;
+  border:0;outline:0;background:transparent;color:transparent;caret-color:var(--accent)}
+#input::selection{background:rgba(99,102,241,.25)}
+.backdrop .hl-layer{min-height:100%}
+mark.hl{background:transparent;border-radius:3px;padding:1px 0;border-bottom:2.5px solid var(--gray);box-decoration-break:clone}
+mark.hl.typo{border-color:var(--red);background:rgba(220,38,38,.08)}
+mark.hl.grammar{border-color:var(--orange);background:rgba(217,119,6,.08)}
+mark.hl.style{border-color:var(--purple);background:rgba(124,58,237,.08)}
+mark.hl.punct{border-color:var(--blue);background:rgba(37,99,235,.08)}
+.stats{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:10px 16px;border-top:1px solid var(--border);
+  font-size:12.5px;color:var(--muted)}
+.stats b{color:var(--fg);font-weight:600}
+details.raw summary{cursor:pointer;font-size:12.5px;color:var(--muted)}
+details.raw pre{max-height:300px;overflow:auto;background:var(--bg);border:1px solid var(--border);
+  border-radius:8px;padding:10px;font-size:11.5px;line-height:1.5}
+/* 错误卡片 */
+.results{margin-top:16px}
+.results h2{font-size:14.5px;margin:0 0 10px;font-weight:600}
+.match{padding:13px 15px;margin-bottom:10px;border-left:3px solid var(--gray)}
+.match.typo{border-left-color:var(--red)}.match.grammar{border-left-color:var(--orange)}
+.match.style{border-left-color:var(--purple)}.match.punct{border-left-color:var(--blue)}
+.ctx{font-size:13.5px;color:var(--muted);margin-bottom:5px;word-break:break-all}
+.ctx b{color:var(--fg);background:rgba(99,102,241,.12);border-radius:3px;padding:1px 3px;font-weight:600}
+.msg{font-size:13.5px;margin-bottom:9px}
+.row{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.badge{font-size:11px;color:var(--muted);background:var(--bg);border:1px solid var(--border);border-radius:99px;padding:2px 9px}
+.fix{font:inherit;font-size:12.5px;color:var(--accent);background:var(--accent-soft);
+  border:1px solid transparent;border-radius:99px;padding:3px 12px;cursor:pointer}
+.fix:hover{border-color:var(--accent)}
+.ignore{margin-left:auto}
+.hint{color:var(--muted);font-size:13px;padding:14px 2px}
+/* 高级设置 */
+details.adv{margin-top:16px;border:1px solid var(--border);border-radius:12px;background:var(--card)}
+details.adv summary{cursor:pointer;padding:12px 16px;font-size:13.5px;font-weight:500;color:var(--muted)}
+.adv-body{padding:2px 16px 16px;display:grid;gap:12px}
+.adv-row{display:grid;gap:4px}
+.adv-row .f{font-size:12.5px;color:var(--muted)}
+.adv-row input[type=text],.adv-row select{width:100%;max-width:480px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;background:var(--accent-soft);
+  color:var(--accent);border-radius:99px;padding:3px 10px}
+.chip button{border:0;background:none;color:inherit;cursor:pointer;font-size:13px;padding:0;line-height:1}
+.banner{display:none;margin:0 0 12px;padding:10px 14px;border-radius:10px;font-size:13px;
+  background:rgba(220,38,38,.08);border:1px solid var(--red);color:var(--red)}
+.banner.show{display:block}
+.spin{display:inline-block;width:12px;height:12px;border:2px solid var(--border);border-top-color:var(--accent);
+  border-radius:99px;animation:r .7s linear infinite;vertical-align:-1px}
+@keyframes r{to{transform:rotate(360deg)}}
+/* 悬浮圆点 + 纠错浮层（仿官方浏览器插件交互） */
+.lt-dot{position:absolute;right:14px;bottom:12px;z-index:6;width:30px;height:30px;border-radius:99px;
+  border:2px solid var(--card);box-shadow:0 2px 10px rgba(0,0,0,.3);cursor:pointer;padding:0;
+  display:flex;align-items:center;justify-content:center;font:600 12.5px/1 inherit;font-family:inherit;color:#fff;
+  transition:transform .12s}
+.lt-dot:hover{transform:scale(1.1)}
+.lt-dot.err{background:var(--red)}.lt-dot.ok{background:#22c55e}.lt-dot.warn{background:var(--orange)}
+.lt-dot.pulse{animation:pulse 1s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.55}}
+.lt-pop{position:absolute;right:12px;bottom:52px;z-index:9;width:360px;max-width:calc(100% - 24px);
+  background:var(--card);border:1px solid var(--border);border-radius:14px;
+  box-shadow:0 12px 40px rgba(8,12,36,.28);display:none;overflow:hidden}
+.lt-pop.open{display:block;animation:pop .15s ease-out}
+@keyframes pop{from{opacity:0;transform:translateY(8px)}to{opacity:1}}
+.pop-head{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px;font-weight:600}
+.pop-head .cnt{color:var(--red);font-weight:500}
+.pop-body{padding:12px 14px;max-height:300px;overflow:auto}
+.pop-nav{display:flex;align-items:center;gap:8px;padding:9px 12px;border-top:1px solid var(--border);
+  font-size:12.5px;color:var(--muted)}
+.pop-nav .btn{white-space:nowrap}
+.pop-nav .pos{min-width:52px;text-align:center;font-variant-numeric:tabular-nums}
+footer{margin-top:22px;color:var(--muted);font-size:12px;line-height:1.7}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">LT</div>
+    <div><h1>LanguageTool 网页校对</h1><div class="sub">拼写 · 语法 · 标点 · 风格 · 多语言自动检测</div></div>
+    <div class="status"><span class="dot" id="statusDot"></span><span id="statusText">连接中…</span></div>
+    <select id="theme" aria-label="主题">
+      <option value="auto">主题：跟随系统</option>
+      <option value="light">浅色</option>
+      <option value="dark">深色</option>
+    </select>
+  </header>
+
+  <div class="banner" id="banner"></div>
+
+  <div class="card">
+    <div class="toolbar">
+      <label class="f">语言
+        <select id="lang" style="max-width:230px"><option value="en-US">English (US)</option></select>
+      </label>
+      <label class="f"><span class="switch"><input type="checkbox" id="auto"><i></i></span>自动检测</label>
+      <label class="f">检查级别
+        <select id="level">
+          <option value="default">标准</option>
+          <option value="picky">严格（含风格）</option>
+          <option value="academic">学术</option>
+        </select>
+      </label>
+      <span style="flex:1"></span>
+      <button class="btn" id="sampleEn" type="button">英文示例</button>
+      <button class="btn" id="sampleZh" type="button">中文示例</button>
+      <button class="btn primary" id="checkNow" type="button">立即检查</button>
+    </div>
+
+    <div class="editor-wrap">
+      <div class="backdrop"><div class="hl-layer" id="hl"></div></div>
+      <textarea id="input" spellcheck="false" placeholder="在此输入要校对的文本…"></textarea>
+      <div class="lt-pop" id="pop" role="dialog" aria-label="纠错助手">
+        <div class="pop-head">纠错助手 <span class="cnt" id="popCnt"></span><span style="flex:1"></span>
+          <button class="btn mini" id="popFixAll" type="button">全部修正</button>
+          <button class="btn mini" id="popClose" type="button" aria-label="关闭">✕</button>
+        </div>
+        <div class="pop-body" id="popBody"></div>
+        <div class="pop-nav">
+          <button class="btn mini" id="popPrev" type="button">‹ 上一个</button>
+          <span class="pos" id="popPos">0 / 0</span>
+          <button class="btn mini" id="popNext" type="button">下一个 ›</button>
+          <span style="flex:1"></span>
+          <span class="text-small" style="color:var(--muted)">点正文下划线可直接定位</span>
+        </div>
+      </div>
+      <button class="lt-dot ok" id="ltDot" type="button" aria-label="纠错助手：无问题">✓</button>
+    </div>
+
+    <div class="stats">
+      <span>字符 <b id="stChars">0</b></span>
+      <span>词数 <b id="stWords">0</b></span>
+      <span>错误 <b id="stMatches">0</b></span>
+      <span>耗时 <b id="stTime">–</b></span>
+      <span id="stDetect" style="display:none">检测语言 <b id="stDetectName"></b></span>
+      <span style="flex:1"></span>
+      <details class="raw"><summary>查看原始 JSON</summary><pre id="rawJson">（暂无）</pre></details>
+    </div>
+  </div>
+
+  <div class="results">
+    <h2 id="resultsTitle">校对结果</h2>
+    <div id="matchList"></div>
+  </div>
+
+  <details class="adv">
+    <summary>高级设置（服务器地址 · 母语 · 规则开关）</summary>
+    <div class="adv-body">
+      <div class="adv-row">
+        <label class="f" for="serverUrl">服务器地址（接入你的服务时改这里即可）</label>
+        <input type="text" id="serverUrl" value="http://localhost:8081" placeholder="http://localhost:8081">
+      </div>
+      <div class="adv-row">
+        <label class="f" for="motherTongue">母语 motherTongue（可选，用于母语者易错点提示）</label>
+        <select id="motherTongue">
+          <option value="">不指定</option>
+          <option value="zh-CN">中文 zh-CN</option>
+          <option value="en-US">English (US)</option>
+          <option value="de-DE">Deutsch</option>
+          <option value="fr">Français</option>
+          <option value="ja-JP">日本語</option>
+        </select>
+      </div>
+      <div class="adv-row">
+        <label class="f" for="preferredVariants">偏好语言变体 preferredVariants（逗号分隔，自动检测时生效）</label>
+        <input type="text" id="preferredVariants" placeholder="例：en-US, zh-CN">
+      </div>
+      <div class="adv-row">
+        <label class="f"><span class="switch"><input type="checkbox" id="enabledOnly"><i></i></span>
+          仅启用指定规则（enabledOnly，需填下方规则 ID）</label>
+        <input type="text" id="enabledRules" placeholder="例：HE_VERB_AGR, SINCE_FOR（逗号分隔）">
+      </div>
+      <div class="adv-row">
+        <span class="f">已忽略的规则（disabledRules，点卡片里的“忽略”自动加入）</span>
+        <div class="chips" id="disabledChips"><span class="f" style="color:var(--muted)">（无）</span></div>
+      </div>
+      <div class="adv-row">
+        <span class="f">已忽略的分类（disabledCategories，整类规则不再检查）</span>
+        <div class="chips" id="disabledCatChips"><span class="f" style="color:var(--muted)">（无）</span></div>
+      </div>
+      <div class="adv-row">
+        <span class="f">本地词典（点“加入词典”的词不再报拼写错误，仅本浏览器生效；接后端后可改为服务端词典）</span>
+        <div class="chips" id="dictChips"><span class="f" style="color:var(--muted)">（无）</span></div>
+      </div>
+    </div>
+  </details>
+
+  <footer>
+    提示：编辑区右下角的圆点显示错误数量，点开可逐个纠错（与官方浏览器插件交互一致）；点正文中的下划线词可直接定位。
+    快捷键：<code>Ctrl/⌘+Enter</code> 立即检查，<code>Esc</code> 关闭浮层，<code>Alt+←/→</code> 在浮层中逐个切换。
+    规则/分类/词典的忽略会保存在本浏览器，接入后端后可持久化到用户系统。
+    首次访问请确认 LanguageTool 服务已带 <code>--allow-origin</code> 参数启动，否则浏览器会拦截跨域请求。
+  </footer>
+</div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const ta = $("input"), hl = $("hl"), backdrop = document.querySelector(".backdrop");
+
+const state = { matches: [], disabledRules: new Set(), disabledCategories: new Set(), localDict: new Set(),
+                checking: false, timer: null, seq: 0 };
+let popIdx = 0;
+
+/* ---------- 持久化 ---------- */
+const LS = "lt-web-editor";
+function savePrefs(){
+  try{ localStorage.setItem(LS, JSON.stringify({
+    serverUrl:$("serverUrl").value, lang:$("lang").value, level:$("level").value,
+    auto:$("auto").checked, motherTongue:$("motherTongue").value,
+    preferredVariants:$("preferredVariants").value,
+    enabledOnly:$("enabledOnly").checked, enabledRules:$("enabledRules").value,
+    theme:$("theme").value
+  })); }catch(e){}
+}
+function loadPrefs(){
+  try{
+    const p = JSON.parse(localStorage.getItem(LS)||"{}");
+    for(const k of ["serverUrl","motherTongue","preferredVariants","enabledRules"])
+      if(p[k]) $(k).value = p[k];
+    for(const k of ["auto","enabledOnly"]) if(p[k]) $(k).checked = true;
+    return p;
+  }catch(e){ return {}; }
+}
+const prefs = loadPrefs();
+
+/* 规则/分类/词典的本地持久化 */
+const SETS_KEY = "lt-web-editor-sets";
+function saveSets(){
+  try{ localStorage.setItem(SETS_KEY, JSON.stringify({
+    rules:[...state.disabledRules], cats:[...state.disabledCategories], dict:[...state.localDict]
+  })); }catch(e){}
+}
+function loadSets(){
+  try{
+    const s = JSON.parse(localStorage.getItem(SETS_KEY)||"{}");
+    if(s.rules) state.disabledRules = new Set(s.rules);
+    if(s.cats)  state.disabledCategories = new Set(s.cats);
+    if(s.dict)  state.localDict = new Set(s.dict);
+  }catch(e){}
+}
+function applyTheme(){
+  const v = $("theme").value;
+  if(v === "auto") document.documentElement.removeAttribute("data-theme");
+  else document.documentElement.dataset.theme = v;
+}
+
+function apiBase(){
+  let u = $("serverUrl").value.trim().replace(/\/+$/,"");
+  return u || "http://localhost:8081";
+}
+
+/* ---------- 状态与提示 ---------- */
+function setStatus(ok, text){
+  $("statusDot").className = "dot " + (ok ? "ok" : "bad");
+  $("statusText").textContent = text;
+}
+function showBanner(msg){
+  const b = $("banner");
+  if(!msg){ b.className = "banner"; return; }
+  b.textContent = msg; b.className = "banner show";
+}
+
+/* ---------- 语言列表 ---------- */
+async function loadLanguages(){
+  try{
+    const r = await fetch(apiBase() + "/v2/languages");
+    if(!r.ok) throw new Error(r.status);
+    const langs = await r.json();
+    const sel = $("lang");
+    sel.innerHTML = langs
+      .slice().sort((a,b)=>a.longCode.localeCompare(b.longCode))
+      .map(l=>`<option value="${l.longCode}">${l.name} (${l.longCode})</option>`).join("");
+    const saved = prefs.lang && langs.some(l=>l.longCode===prefs.lang) ? prefs.lang : "en-US";
+    sel.value = langs.some(l=>l.longCode===saved) ? saved : langs[0].longCode;
+    setStatus(true, "已连接 " + apiBase().replace(/^https?:\/\//,""));
+  }catch(e){
+    setStatus(false, "无法连接服务器");
+    showBanner("无法连接 " + apiBase() + " ：请确认服务已启动，且启动时带有 --allow-origin 参数（浏览器跨域需要）。");
+  }
+}
+
+/* ---------- 请求 ---------- */
+function buildParams(){
+  const p = new URLSearchParams();
+  p.set("text", ta.value);
+  p.set("language", $("auto").checked ? "auto" : $("lang").value);
+  p.set("level", $("level").value);
+  if($("motherTongue").value) p.set("motherTongue", $("motherTongue").value);
+  const pv = $("preferredVariants").value.trim();
+  if(pv && $("auto").checked) p.set("preferredVariants", pv);
+  if($("enabledOnly").checked){
+    p.set("enabledOnly", "true");
+    const rules = $("enabledRules").value.trim();
+    if(rules) p.set("enabledRules", rules);
+  }
+  if(state.disabledRules.size) p.set("disabledRules", [...state.disabledRules].join(","));
+  if(state.disabledCategories.size) p.set("disabledCategories", [...state.disabledCategories].join(","));
+  return p;
+}
+
+/* 拼写类匹配的识别与本地词典过滤 */
+function isSpellingMatch(m){
+  const rid = (m.rule && m.rule.id) || "";
+  const cat = (m.rule && m.rule.category && m.rule.category.id) || "";
+  return /MORFOLOGIK|HUNSPELL|SPELL|TYPO/i.test(rid + " " + cat);
+}
+function flaggedWord(m){
+  const c = m.context || {};
+  return (c.text.slice(c.offset, c.offset + c.length) || "").trim();
+}
+function isDictHidden(m){
+  if(!state.localDict.size) return false;
+  if(!isSpellingMatch(m)) return false;
+  const w = flaggedWord(m).toLowerCase();
+  return w && !/\s/.test(w) && state.localDict.has(w);
+}
+
+async function check(){
+  if(!ta.value.trim()){ state.matches=[]; render(); $("stTime").textContent="–"; $("rawJson").textContent="（暂无）"; return; }
+  const seq = ++state.seq;
+  state.checking = true;
+  updateDot();
+  $("checkNow").innerHTML = '<span class="spin"></span> 检查中…';
+  const t0 = performance.now();
+  try{
+    const r = await fetch(apiBase() + "/v2/check", { method:"POST", body: buildParams() });
+    const data = await r.json().catch(()=>({}));
+    if(seq !== state.seq) return;               // 已有更新的请求，丢弃旧结果
+    if(!r.ok) throw new Error(data && data.error ? data.error.message || data.error : ("HTTP " + r.status));
+    state.matches = (data.matches || []).filter(m => !isDictHidden(m));
+    $("rawJson").textContent = JSON.stringify(data, null, 2);
+    $("stTime").textContent = Math.round(performance.now() - t0) + " ms";
+    const det = data.language && data.language.detectedLanguage;
+    $("stDetect").style.display = $("auto").checked ? "" : "none";
+    if(det) $("stDetectName").textContent = det.name + " (" + det.code + ")";
+    showBanner(null);
+    setStatus(true, "已连接 " + apiBase().replace(/^https?:\/\//,""));
+  }catch(e){
+    if(seq !== state.seq) return;
+    state.matches = [];
+    showBanner("检查失败：" + e.message + "（请确认服务器地址、网络与 CORS 配置）");
+  }finally{
+    if(seq === state.seq){
+      state.checking = false;
+      $("checkNow").textContent = "立即检查";
+      render();
+    }
+  }
+}
+function scheduleCheck(){ clearTimeout(state.timer); state.timer = setTimeout(check, 700); }
+
+/* ---------- 渲染 ---------- */
+function catClass(m){
+  const c = (m.rule && m.rule.category && m.rule.category.id || "") + " " + (m.rule && m.rule.id || "");
+  if(/TYPO|SPELL|CONFUSION|TPS/i.test(c)) return "typo";
+  if(/STYLE|COLLOC|REDUNDAN|WORDINESS|PLAIN|PICKY|TZ_|EN_|CASING/i.test(c) && !/GRAMMAR/.test(c)) return "style";
+  if(/PUNCT|CASING|SPACES|DASH/i.test(c)) return "punct";
+  if(/GRAMMAR|AGR| Agreement|VERB|NOUN|PRONOUN|MISSING|SENTENCE/i.test(c)) return "grammar";
+  return "punct";
+}
+function esc(s){ return s.replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+function render(){
+  $("stChars").textContent = ta.value.length;
+  $("stWords").textContent = (ta.value.match(/[\u4e00-\u9fff]|[A-Za-z0-9'’-]+/g) || []).length;
+  $("stMatches").textContent = state.matches.length;
+  $("resultsTitle").textContent = "校对结果（" + state.matches.length + "）";
+  updateDot();
+
+  /* 高亮层 */
+  const text = ta.value;
+  const ms = state.matches.filter(m=>typeof m.offset==="number" && m.length>0)
+                         .sort((a,b)=>a.offset-b.offset);
+  let html = "", pos = 0;
+  const usedIdx = new Set();
+  for(const m of ms){
+    const start = m.offset, end = m.offset + m.length;
+    if(start < pos) continue;                   // 重叠的取前一个
+    usedIdx.add(state.matches.indexOf(m));
+    html += esc(text.slice(pos, start));
+    html += `<mark class="hl ${catClass(m)}">${esc(text.slice(start, end))}</mark>`;
+    pos = end;
+  }
+  html += esc(text.slice(pos)) + "\n";
+  hl.innerHTML = html;
+
+  /* 错误卡片 */
+  const list = $("matchList");
+  if(!state.matches.length){
+    list.innerHTML = text.trim()
+      ? '<div class="hint">✓ 未发现问题。可尝试切换“严格”级别以检查风格类问题。</div>'
+      : '<div class="hint">输入或粘贴文本后自动开始检查。</div>';
+    return;
+  }
+  list.innerHTML = state.matches.map((m,i)=>{
+    const ctx = m.context || {text:"", offset:0, length:0};
+    const before = esc(ctx.text.slice(0, ctx.offset));
+    const mid = esc(ctx.text.slice(ctx.offset, ctx.offset + ctx.length));
+    const after = esc(ctx.text.slice(ctx.offset + ctx.length));
+    const reps = (m.replacements||[]).slice(0,6)
+      .map(r=>`<button class="fix" data-i="${i}" data-v="${esc(r.value)}">${esc(r.value)}</button>`).join("");
+    const cat = m.rule && m.rule.category ? m.rule.category.name : "";
+    const catId = m.rule && m.rule.category ? m.rule.category.id : "";
+    const rid = m.rule ? m.rule.id : "";
+    const ignored = state.disabledRules.has(rid);
+    return `<div class="card match ${catClass(m)}">
+      <div class="ctx">${before}<b>${mid||"（空）"}</b>${after}</div>
+      <div class="msg">${esc(m.message)}${m.shortMessage?` <span style="color:var(--muted)">（${esc(m.shortMessage)}）</span>`:""}</div>
+      <div class="row">
+        <span class="badge">${esc(cat)}</span><span class="badge">${esc(rid)}</span>
+        ${reps}
+        <button class="btn mini ignore" data-rule="${esc(rid)}" ${ignored?"disabled":""}>${ignored?"已忽略":"忽略此规则"}</button>
+        ${catId?`<button class="btn mini" data-cat="${esc(catId)}">忽略此分类</button>`:""}
+        ${isSpellingMatch(m)?`<button class="btn mini" data-dictword="${esc(flaggedWord(m))}">加入词典</button>`:""}
+      </div>
+    </div>`;
+  }).join("");
+}
+
+/* ---------- 悬浮圆点 + 纠错浮层 ---------- */
+function updateDot(){
+  const dot = $("ltDot");
+  if(state.checking){
+    dot.className = "lt-dot warn pulse"; dot.textContent = "…";
+    dot.setAttribute("aria-label", "正在检查");
+  }else{
+    const n = state.matches.length;
+    if(n > 0){ dot.className = "lt-dot err"; dot.textContent = n > 99 ? "99+" : n; }
+    else{ dot.className = "lt-dot ok"; dot.textContent = "✓"; }
+    dot.setAttribute("aria-label", `纠错助手：${n} 个问题`);
+  }
+  $("popCnt").textContent = state.matches.length ? `（${state.matches.length} 个问题）` : "（无问题）";
+  if(!state.checking && !state.matches.length) closePop();
+  if($("pop").classList.contains("open")) renderPop();
+}
+function openPop(i){
+  popIdx = Math.max(0, Math.min(i || 0, state.matches.length - 1));
+  $("pop").classList.add("open");
+  renderPop();
+}
+function closePop(){ $("pop").classList.remove("open"); }
+function renderPop(){
+  const body = $("popBody"), ms = state.matches;
+  if(!ms.length){
+    body.innerHTML = '<div class="hint" style="padding:4px 0">✓ 没有发现问题。</div>';
+    $("popPos").textContent = "0 / 0";
+    return;
+  }
+  if(popIdx >= ms.length) popIdx = ms.length - 1;
+  if(popIdx < 0) popIdx = 0;
+  const m = ms[popIdx];
+  const ctx = m.context || {text:"",offset:0,length:0};
+  const before = esc(ctx.text.slice(0, ctx.offset));
+  const mid = esc(ctx.text.slice(ctx.offset, ctx.offset + ctx.length));
+  const after = esc(ctx.text.slice(ctx.offset + ctx.length));
+  const reps = (m.replacements||[]).slice(0,6)
+    .map((r,k)=>`<button class="fix" data-pop="${k}" type="button">${esc(r.value)}</button>`).join("");
+  const cat = m.rule && m.rule.category ? m.rule.category.name : "";
+  const catId = m.rule && m.rule.category ? m.rule.category.id : "";
+  body.innerHTML = `<div class="ctx">${before}<b>${mid||"（空）"}</b>${after}</div>
+    <div class="msg">${esc(m.message)}</div>
+    <div class="row"><span class="badge">${esc(cat)}</span><span class="badge">${esc(m.rule?m.rule.id:"")}</span>${reps}
+      <button class="btn mini" id="popIgnore" type="button">忽略</button>
+      ${catId?`<button class="btn mini" id="popIgnoreCat" type="button">忽略分类</button>`:""}
+      ${isSpellingMatch(m)?`<button class="btn mini" id="popDict" type="button">加入词典</button>`:""}</div>`;
+  $("popPos").textContent = `${popIdx+1} / ${ms.length}`;
+  body.querySelectorAll(".fix").forEach(b=>b.addEventListener("click", ()=>
+    applyMatch(popIdx, m.replacements[+b.dataset.pop].value)));
+  body.querySelector("#popIgnore").addEventListener("click", ()=>{
+    if(m.rule){ state.disabledRules.add(m.rule.id); saveSets(); renderChips(); check(); }
+  });
+  const catBtn2 = body.querySelector("#popIgnoreCat");
+  if(catBtn2) catBtn2.addEventListener("click", ()=>{
+    state.disabledCategories.add(catId); saveSets(); renderChips(); check();
+  });
+  const dictBtn2 = body.querySelector("#popDict");
+  if(dictBtn2) dictBtn2.addEventListener("click", ()=>{
+    state.localDict.add(flaggedWord(m).toLowerCase()); saveSets(); renderChips(); check();
+  });
+}
+function applyMatch(i, value){
+  const m = state.matches[i];
+  if(!m) return;
+  ta.value = ta.value.slice(0, m.offset) + value + ta.value.slice(m.offset + m.length);
+  check();
+}
+$("ltDot").addEventListener("click", ()=> $("pop").classList.contains("open") ? closePop() : openPop(popIdx));
+$("popClose").addEventListener("click", closePop);
+$("popPrev").addEventListener("click", ()=>{ popIdx = Math.max(0, popIdx-1); renderPop(); });
+$("popNext").addEventListener("click", ()=>{ popIdx = Math.min(state.matches.length-1, popIdx+1); renderPop(); });
+$("popFixAll").addEventListener("click", ()=>{
+  const ms = [...state.matches].sort((a,b)=>b.offset-a.offset);   // 从后往前替换，避免偏移位移
+  let text = ta.value; const used = new Set();
+  for(const m of ms){
+    if(!m.replacements || !m.replacements.length) continue;
+    const key = m.offset + ":" + m.length;
+    if(used.has(key) || m.offset < 0 || m.offset + m.length > text.length) continue;
+    used.add(key);
+    text = text.slice(0, m.offset) + m.replacements[0].value + text.slice(m.offset + m.length);
+  }
+  ta.value = text; check();
+});
+/* 点正文里的下划线词，浮层直接定位到该错误 */
+ta.addEventListener("click", ()=>{
+  setTimeout(()=>{
+    const pos = ta.selectionStart;
+    const i = state.matches.findIndex(m => typeof m.offset==="number" && pos>=m.offset && pos<=m.offset+m.length);
+    if(i >= 0){ popIdx = i; openPop(i); }
+  }, 0);
+});
+
+/* ---------- 交互 ---------- */
+ta.addEventListener("input", scheduleCheck);
+ta.addEventListener("scroll", ()=>{ backdrop.scrollTop = ta.scrollTop; });
+$("checkNow").addEventListener("click", check);
+["lang","level","auto","motherTongue","preferredVariants","enabledOnly","enabledRules"]
+  .forEach(id=>$(id).addEventListener("change", ()=>{ savePrefs(); check(); }));
+$("serverUrl").addEventListener("change", ()=>{ savePrefs(); state.disabledRules.clear(); state.disabledCategories.clear(); renderChips(); loadLanguages(); });
+$("theme").addEventListener("change", ()=>{ savePrefs(); applyTheme(); });
+
+/* 快捷键：Ctrl/⌘+Enter 立即检查；Esc 关浮层；浮层打开时 ←/→ 或 Alt+←/→ 切换 */
+document.addEventListener("keydown", e=>{
+  if(e.key === "Escape" && $("pop").classList.contains("open")){ closePop(); }
+  else if((e.metaKey || e.ctrlKey) && e.key === "Enter"){ e.preventDefault(); check(); }
+  else if($("pop").classList.contains("open") && (e.key === "ArrowLeft" || e.key === "ArrowRight")
+          && (e.altKey || document.activeElement !== ta)){
+    e.preventDefault();
+    if(e.key === "ArrowLeft") $("popPrev").click(); else $("popNext").click();
+  }
+});
+
+$("matchList").addEventListener("click", e=>{
+  const catBtn = e.target.closest("[data-cat]");
+  if(catBtn && catBtn.dataset.cat){
+    state.disabledCategories.add(catBtn.dataset.cat); saveSets(); renderChips(); check(); return;
+  }
+  const dictBtn = e.target.closest("[data-dictword]");
+  if(dictBtn && dictBtn.dataset.dictword){
+    state.localDict.add(dictBtn.dataset.dictword.trim().toLowerCase()); saveSets(); renderChips(); check(); return;
+  }
+  const fix = e.target.closest(".fix");
+  if(fix){
+    const m = state.matches[+fix.dataset.i];
+    const v = fix.dataset.v;
+    ta.value = ta.value.slice(0, m.offset) + v + ta.value.slice(m.offset + m.length);
+    check(); return;
+  }
+  const ig = e.target.closest(".ignore");
+  if(ig && ig.dataset.rule){
+    state.disabledRules.add(ig.dataset.rule); renderChips(); check();
+  }
+});
+function renderChips(){
+  renderChipBox($("disabledChips"), state.disabledRules, "rule");
+  renderChipBox($("disabledCatChips"), state.disabledCategories, "cat");
+  renderChipBox($("dictChips"), state.localDict, "dict");
+}
+function renderChipBox(box, set, kind){
+  if(!set.size){ box.innerHTML = '<span class="f" style="color:var(--muted)">（无）</span>'; return; }
+  box.innerHTML = [...set].map(v=>
+    `<span class="chip">${esc(v)}<button type="button" data-kind="${kind}" data-v="${esc(v)}" aria-label="移除">✕</button></span>`).join("");
+  box.querySelectorAll("button").forEach(b=>b.addEventListener("click", ()=>{
+    const s = b.dataset.kind === "rule" ? state.disabledRules
+            : b.dataset.kind === "cat"  ? state.disabledCategories : state.localDict;
+    s.delete(b.dataset.v); saveSets(); renderChips(); check();
+  }));
+}
+
+$("sampleEn").addEventListener("click", ()=>{
+  ta.value = "She don't know wether he recieved there package or not. We discussed about it, and made a big progress yesterday.";
+  check();
+});
+$("sampleZh").addEventListener("click", ()=>{
+  ta.value = "他们上个月定婚了，昨天我去他家作客。今天天起真好，我们一起去公圆散步吧。";
+  check();
+});
+
+/* ---------- 启动 ---------- */
+loadSets(); renderChips();
+if(prefs.theme){ $("theme").value = prefs.theme; }
+applyTheme();
+loadLanguages().then(()=>{ ta.value = "She don't know wether he recieved there package or not. We discussed about it, and made a big progress yesterday."; check(); });
+</script>
+</body>
+</html>
