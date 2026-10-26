@@ -10,12 +10,14 @@
   --accent:#4f46e5; --accent-soft:#eef0fe; --accent-fg:#ffffff;
   --red:#dc2626; --orange:#d97706; --purple:#7c3aed; --blue:#2563eb; --gray:#64748b; --green:#16a34a;
   --shadow:0 1px 3px rgba(16,20,40,.06),0 8px 24px rgba(16,20,40,.05);
+  --pop-shadow:0 4px 10px rgba(12,16,40,.08),0 14px 36px rgba(12,16,40,.16);
 }
 :root[data-theme="dark"]{
   --bg:#13151d; --card:#1c1f2a; --fg:#e9ebf3; --muted:#9aa2b4; --border:#2b2f3d;
   --accent:#818cf8; --accent-soft:#252840; --accent-fg:#101322;
   --red:#f87171; --orange:#fbbf24; --purple:#c4b5fd; --blue:#60a5fa; --gray:#94a3b8; --green:#4ade80;
   --shadow:0 1px 3px rgba(0,0,0,.4);
+  --pop-shadow:0 4px 10px rgba(0,0,0,.4),0 14px 36px rgba(0,0,0,.55);
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
@@ -23,6 +25,7 @@
     --accent:#818cf8; --accent-soft:#252840; --accent-fg:#101322;
     --red:#f87171; --orange:#fbbf24; --purple:#c4b5fd; --blue:#60a5fa; --gray:#94a3b8; --green:#4ade80;
     --shadow:0 1px 3px rgba(0,0,0,.4);
+    --pop-shadow:0 4px 10px rgba(0,0,0,.4),0 14px 36px rgba(0,0,0,.55);
   }
 }
 *{box-sizing:border-box}
@@ -63,6 +66,31 @@ select:focus-visible,input[type=text]:focus-visible,input[type=number]:focus-vis
 .bank-del:focus-visible,.selbar button:focus-visible,.count-badge:focus-visible,.bank-btn:focus-visible,
 .fc-saved button:focus-visible,.rulerow button:focus-visible,details.sec>summary:focus-visible,
 details.raw summary:focus-visible,.badge:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+/* 自定义下拉框：替代原生 select 弹层，统一观感与键盘交互 */
+.dd{position:relative;display:inline-flex;vertical-align:middle;min-width:0}
+.dd>select{display:none}
+.dd-btn{display:inline-flex;align-items:center;gap:7px;width:100%;min-width:0;
+  font:inherit;font-size:13.5px;color:var(--fg);background:var(--bg);
+  border:1px solid var(--border);border-radius:8px;padding:6px 10px;cursor:pointer;white-space:nowrap}
+.dd-btn:hover{border-color:var(--accent)}
+.dd-btn:focus-visible{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.dd.open .dd-btn{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.dd-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.dd-btn .dd-chev{flex:none;width:11px;height:11px;color:var(--muted);transition:transform .15s}
+.dd.open .dd-chev{transform:rotate(180deg);color:var(--accent)}
+.dd-pop{position:absolute;top:calc(100% + 6px);left:0;min-width:100%;max-width:min(420px,calc(100vw - 20px));z-index:30;
+  background:var(--card);border:1px solid var(--border);border-radius:11px;box-shadow:var(--pop-shadow);
+  padding:5px;margin:0;list-style:none;display:none;max-height:320px;overflow:auto;overscroll-behavior:contain}
+.dd-pop.up{top:auto;bottom:calc(100% + 6px)}
+.dd-pop.right{left:auto;right:0}
+.dd.open .dd-pop{display:block;animation:ddin .13s ease-out}
+@keyframes ddin{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.dd-opt{display:flex;align-items:center;gap:6px;padding:7px 11px;border-radius:7px;
+  font-size:13px;color:var(--fg);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dd-opt:hover,.dd-opt.act{background:var(--bg)}
+.dd-opt.on{color:var(--accent);font-weight:500}
+.dd-opt.on::after{content:"✓";margin-left:auto;font-size:12px;flex:none}
+.dd-opt.on:hover,.dd-opt.on.act{background:var(--accent-soft)}
 .switch{position:relative;width:36px;height:20px;flex:none;cursor:pointer}
 .switch input{opacity:0;width:100%;height:100%;position:absolute;margin:0;cursor:pointer}
 .switch i{position:absolute;inset:0;background:var(--border);border-radius:99px;transition:.15s;pointer-events:none}
@@ -70,7 +98,7 @@ details.raw summary:focus-visible,.badge:focus-visible{outline:2px solid var(--a
 .switch input:checked + i{background:var(--accent)}
 .switch input:checked + i::after{transform:translateX(16px)}
 .btn{font:inherit;font-size:13.5px;color:var(--fg);background:var(--card);border:1px solid var(--border);
-  border-radius:8px;padding:6px 12px;cursor:pointer;white-space:nowrap}
+  border-radius:99px;padding:6px 13px;cursor:pointer;white-space:nowrap}
 .btn:hover{border-color:var(--accent);color:var(--accent)}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg);font-weight:500}
 .btn.primary:hover{opacity:.9;color:var(--accent-fg)}
@@ -1761,11 +1789,141 @@ document.addEventListener("keydown", e => {
   if(e.key === "?" && !typing){ e.preventDefault(); openModal("helpModal"); }
 });
 
+/* ---------------- 自定义下拉框 ---------------- */
+const dds = [];
+function closeAllDd(){ for(const d of dds) d.close(); }
+function initDropdowns(){
+  const CHEV = '<svg class="dd-chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  document.querySelectorAll("select").forEach(sel => {
+    if(sel.dataset.ddDone) return; sel.dataset.ddDone = "1";
+    const dd = document.createElement("span"); dd.className = "dd";
+    sel.parentNode.insertBefore(dd, sel); dd.appendChild(sel);
+    const btn = document.createElement("button");
+    btn.type = "button"; btn.className = "dd-btn"; btn.id = sel.id + "-ddbtn";
+    btn.setAttribute("aria-haspopup", "listbox"); btn.setAttribute("aria-expanded", "false");
+    if(sel.getAttribute("aria-label")) btn.setAttribute("aria-label", sel.getAttribute("aria-label"));
+    const lab = document.createElement("span"); lab.className = "dd-label";
+    btn.appendChild(lab); btn.insertAdjacentHTML("beforeend", CHEV);
+    const pop = document.createElement("ul"); pop.className = "dd-pop"; pop.id = sel.id + "-ddpop";
+    pop.setAttribute("role", "listbox"); pop.tabIndex = -1;
+    dd.append(btn, pop);
+    if(sel.style.maxWidth){ dd.style.maxWidth = sel.style.maxWidth; sel.style.maxWidth = ""; }
+    const lbl = document.querySelector('label[for="' + sel.id + '"]');
+    if(lbl) lbl.htmlFor = btn.id;
+    let opts = [], act = -1, typeBuf = "", typeTimer = null;
+
+    const curLabel = () => (sel.selectedOptions[0] ? sel.selectedOptions[0].textContent.trim() : "");
+    function syncSel(){
+      lab.textContent = curLabel();
+      opts.forEach((li, i) => {
+        const on = sel.options[i].selected;
+        li.classList.toggle("on", on);
+        li.setAttribute("aria-selected", on ? "true" : "false");
+      });
+    }
+    function renderOpts(){
+      pop.innerHTML = ""; opts = [];
+      [...sel.options].forEach((o, i) => {
+        const li = document.createElement("li");
+        li.className = "dd-opt"; li.id = sel.id + "-opt" + i;
+        li.setAttribute("role", "option");
+        li.textContent = o.textContent.trim();
+        pop.appendChild(li); opts.push(li);
+      });
+      syncSel();
+    }
+    function setAct(i, scroll){
+      act = i < 0 ? opts.length - 1 : i >= opts.length ? 0 : i;
+      opts.forEach((li, k) => li.classList.toggle("act", k === act));
+      btn.setAttribute("aria-activedescendant", opts[act].id);
+      if(scroll !== false) opts[act].scrollIntoView({block: "nearest"});
+    }
+    function close(){
+      dd.classList.remove("open");
+      btn.setAttribute("aria-expanded", "false");
+      btn.removeAttribute("aria-activedescendant");
+      opts.forEach(li => li.classList.remove("act"));
+      act = -1;
+    }
+    function openPop(){
+      closeAllDd();
+      renderOpts();
+      if(!opts.length) return;
+      dd.classList.add("open"); btn.setAttribute("aria-expanded", "true");
+      const r = btn.getBoundingClientRect();
+      const ph = Math.min(320, pop.scrollHeight + 12);
+      pop.classList.toggle("up", window.innerHeight - r.bottom < ph && r.top > ph);
+      pop.classList.remove("right");
+      if(pop.getBoundingClientRect().right > window.innerWidth - 8) pop.classList.add("right");
+      pop.style.maxWidth = Math.max(180, (pop.classList.contains("right") ? r.right : window.innerWidth - r.left) - 8) + "px";
+      setAct(sel.selectedIndex < 0 ? 0 : sel.selectedIndex, false);
+      if(opts[act]) opts[act].scrollIntoView({block: "nearest"});
+    }
+    function choose(i){
+      if(i < 0 || i >= opts.length) return;
+      if(sel.selectedIndex !== i){
+        sel.selectedIndex = i;
+        sel.dispatchEvent(new Event("change", {bubbles: true}));
+      }
+      close(); syncSel(); btn.focus();
+    }
+    btn.addEventListener("click", () => dd.classList.contains("open") ? close() : openPop());
+    btn.addEventListener("keydown", e => {
+      const openNow = dd.classList.contains("open");
+      if(["ArrowDown","ArrowUp","Enter"," ","Escape"].includes(e.key) ||
+         (e.key.length === 1 && e.key !== " ")){
+        if(e.key !== "Escape" || openNow) e.stopPropagation();
+      }
+      if(e.key === "ArrowDown" || e.key === "ArrowUp"){
+        e.preventDefault();
+        if(!openNow) openPop(); else setAct(act + (e.key === "ArrowDown" ? 1 : -1));
+      } else if(e.key === "Enter" || e.key === " "){
+        e.preventDefault();
+        if(!openNow) openPop(); else choose(act);
+      } else if(e.key === "Escape"){
+        if(openNow){ close(); btn.focus(); }
+      } else if(e.key === "Tab"){
+        if(openNow) close();
+      } else if(e.key.length === 1 && e.key !== " "){
+        clearTimeout(typeTimer);
+        typeBuf = (typeBuf + e.key).toLowerCase();
+        typeTimer = setTimeout(() => typeBuf = "", 500);
+        if(!openNow) openPop();
+        const k = opts.findIndex(li => li.textContent.toLowerCase().includes(typeBuf));
+        if(k >= 0) setAct(k);
+      }
+    });
+    pop.addEventListener("mousemove", e => {
+      const li = e.target.closest(".dd-opt");
+      if(li && opts.indexOf(li) !== act) setAct(opts.indexOf(li), false);
+    });
+    pop.addEventListener("click", e => {
+      const li = e.target.closest(".dd-opt");
+      if(li) choose(opts.indexOf(li));
+    });
+    new MutationObserver(() => {
+      renderOpts();
+    }).observe(sel, {childList: true});
+    renderOpts();
+    dds.push({close});
+  });
+  document.addEventListener("pointerdown", e => { if(openDdExists(e.target)) return; closeAllDd(); });
+  document.addEventListener("scroll", e => {
+    if(!openDdExists(e.target)) closeAllDd();
+  }, true);
+  window.addEventListener("resize", closeAllDd);
+  function openDdExists(target){
+    const open = document.querySelector(".dd.open");
+    return !!(open && open.contains(target));
+  }
+}
+
 /* ---------------- 启动 ---------------- */
 loadSets(); loadBank(); renderChips(); renderBank();
 if(prefs.theme) $("theme").value = prefs.theme;
 applyTheme();
 $("ruleCount").textContent = "–";
+initDropdowns();
 
 (async function boot(){
   await connect();
