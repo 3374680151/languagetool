@@ -14,6 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"fluentread/internal/errs"
+	"fluentread/internal/gateway"
 	"fluentread/internal/httpapi/middleware"
 	"fluentread/internal/service"
 )
@@ -27,6 +28,12 @@ type translateBody struct {
 	To    string `json:"to"`
 	Style string `json:"style"`
 	Model string `json:"model"`
+	// Custom 是访客自定义端点（L3，FR-403）：服务端即用即弃转发（FR-404）。
+	Custom *struct {
+		BaseURL string `json:"baseURL"`
+		APIKey  string `json:"apiKey"`
+		Model   string `json:"model"`
+	} `json:"custom"`
 }
 
 // Translate 处理逐段翻译。
@@ -53,6 +60,13 @@ func (a *App) Translate(c *gin.Context) {
 	}
 	for _, s := range body.Segments {
 		req.Segments = append(req.Segments, s.Text)
+	}
+	if body.Custom != nil && body.Custom.BaseURL != "" && body.Custom.APIKey != "" && body.Custom.Model != "" {
+		req.Custom = &gateway.CustomUpstream{
+			BaseURL: body.Custom.BaseURL,
+			APIKey:  body.Custom.APIKey,
+			Model:   body.Custom.Model,
+		}
 	}
 
 	// ③ 编排（校验/配额/并发/降级/计费都在 service）。

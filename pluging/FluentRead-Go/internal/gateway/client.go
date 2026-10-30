@@ -57,7 +57,9 @@ type ChatResponse struct {
 }
 
 // New 构造客户端。base 形如 http://litellm:4000（不含 /v1）；keys 按顺序轮换。
+// 访客常把 "/v1" 也填进来：统一剥掉尾部，避免拼出 /v1/v1。
 func New(base string, keys []string, timeout time.Duration) *Client {
+	base = strings.TrimSuffix(strings.TrimRight(strings.TrimSpace(base), "/"), "/v1")
 	cleaned := make([]string, 0, len(keys))
 	for _, k := range keys {
 		if v := strings.TrimSpace(k); v != "" {

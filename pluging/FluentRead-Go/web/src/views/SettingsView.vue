@@ -1,14 +1,16 @@
 <!--
-  SettingsView.vue 是设置页（FR-1001 六项偏好 + FR-1003 服务状态 + FR-1004 如实开关）。
+  SettingsView.vue 是设置页（FR-1001 六项偏好 + FR-403 自定义模型 + FR-1003 服务状态）。
   @file web/src/views/SettingsView.vue
-  文件职责：语言对/风格/主题/查词触发方式/词卡自动朗读的表单（模型选择随 P3.5
-  接入站点池下拉）；只读"服务状态"区块（网关/数据库/版本）；改主题立即生效。
-  模块边界：数据在 stores/settings 与 stores/config；无任何密钥输入框（FR-1002）。
+  文件职责：语言对/风格/主题/查词触发方式/词卡自动朗读的表单；自定义模型表单
+  （baseURL/apiKey/model + 测试连接 + "密钥会经本站转发"告知，FR-403/404）；
+  只读"服务状态"区块（FR-1003）。模型下拉在写作台顶栏（FR-402）。
+  模块边界：数据在 stores/settings 与 stores/config；测试连接走 api/client。
 -->
 <script setup lang="ts">
-import { onMounted } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useSettingsStore } from '../stores/settings';
 import { useConfigStore } from '../stores/config';
+import { postModelTest } from '../api/client';
 import { Languages } from '../lib/lang';
 
 const settings = useSettingsStore();
@@ -27,6 +29,45 @@ const triggerOptions = [
   { value: 'icon', label: '浮标确认' },
   { value: 'modifier', label: '修饰键' },
 ];
+
+// 自定义模型表单（FR-403）：apiKey 只进内存（FR-404）。
+const customForm = ref({
+  baseURL: settings.customModel.baseURL,
+  model: settings.customModel.model,
+  apiKey: settings.customModel.apiKey,
+});
+const testState = ref({ testing: false, result: '' });
+
+/** testCustom 测试连接：服务端转发一次最小调用（FR-403）。 */
+async function testCustom() {
+  testState.value = { testing: true, result: '' };
+  try {
+    const r = await postModelTest({
+      baseURL: customForm.value.baseURL.trim(),
+      apiKey: customForm.value.apiKey.trim(),
+      model: customForm.value.model.trim(),
+    });
+    testState.value.result = r.ok ? `连接成功（${r.latencyMs ?? 0}ms）` : `连接失败：${r.message}`;
+  } catch (e) {
+    testState.value.result = e instanceof Error ? e.message : '测试失败，请稍后重试';
+  } finally {
+    testState.value.testing = false;
+  }
+}
+
+/** saveCustom 保存自定义端点。 */
+function saveCustom() {
+  settings.saveCustom({
+    baseURL: customForm.value.baseURL.trim(),
+    model: customForm.value.model.trim(),
+    apiKey: customForm.value.apiKey.trim(),
+  });
+  if (!customForm.value.baseURL.trim() || !customForm.value.model.trim()) {
+    testState.value.result = '已清空自定义模型（将使用站点默认模型）';
+    return;
+  }
+  testState.value.result = '已保存。到写作台顶栏选"自定义模型…"即可使用。';
+}
 
 onMounted(() => {
   if (!config.loaded) void config.refresh();
@@ -97,6 +138,36 @@ onMounted(() => {
             data-test="pref-autospeak"
             @update:model-value="(v: boolean) => settings.patch({ autoSpeak: v })"
           />
+        </el-form-item>
+      </el-form>
+    </section>
+
+    <section class="card block">
+      <h1>自定义模型（可选）</h1>
+      <p class="hint" style="margin-top:0">
+        用自己的模型账号：填写 OpenAI 兼容端点、密钥与模型名。
+        <strong>密钥会经本站转发</strong>（浏览器直连会被跨域拦截），用完即弃、不落盘、不写日志。
+      </p>
+      <el-form label-width="140px" label-position="left">
+        <el-form-item label="API 地址">
+          <el-input v-model="customForm.baseURL" data-test="custom-base" placeholder="例如 https://api.openai.com（不带 /v1，填了也会自动去掉）" />
+        </el-form-item>
+        <el-form-item label="API 密钥">
+          <el-input
+            v-model="customForm.apiKey"
+            data-test="custom-key"
+            type="password"
+            show-password
+            placeholder="只在本次会话内存中保存，刷新后需重填"
+          />
+        </el-form-item>
+        <el-form-item label="模型名">
+          <el-input v-model="customForm.model" data-test="custom-model" placeholder="例如 deepseek-chat" />
+        </el-form-item>
+        <el-form-item>
+          <el-button :loading="testState.testing" data-test="custom-test" @click="testCustom">测试连接</el-button>
+          <el-button type="primary" data-test="custom-save" @click="saveCustom">保存</el-button>
+          <span v-if="testState.result" class="hint" data-test="custom-result" style="margin-left:8px">{{ testState.result }}</span>
         </el-form-item>
       </el-form>
     </section>

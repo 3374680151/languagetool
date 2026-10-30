@@ -16,6 +16,8 @@ import { getPrefs, putPrefs } from '../api/client';
 import type { UserPrefs } from '../api/types';
 
 const STORAGE_KEY = 'fr.prefs.v1';
+/** 自定义端点单独存：baseURL/model 可以落 localStorage，apiKey 绝不落盘（FR-404）。 */
+const CUSTOM_KEY = 'fr.custom.v1';
 
 const DEFAULT_PREFS: UserPrefs = {
   langPair: { from: 'en', to: 'zh-Hans' },
@@ -25,6 +27,13 @@ const DEFAULT_PREFS: UserPrefs = {
   wordTrigger: 'direct',
   autoSpeak: false,
 };
+
+export interface CustomModel {
+  baseURL: string;
+  model: string;
+  /** apiKey 只存内存（Pinia），刷新后需重新填写——密钥不落任何盘（FR-404）。 */
+  apiKey: string;
+}
 
 function loadLocal(): UserPrefs {
   try {
@@ -38,16 +47,45 @@ function loadLocal(): UserPrefs {
   return { ...DEFAULT_PREFS };
 }
 
+function loadCustom(): CustomModel {
+  try {
+    const raw = localStorage.getItem(CUSTOM_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as Partial<CustomModel>;
+      return { baseURL: parsed.baseURL ?? '', model: parsed.model ?? '', apiKey: '' };
+    }
+  } catch {
+    // 同上。
+  }
+  return { baseURL: '', model: '', apiKey: '' };
+}
+
 export const useSettingsStore = defineStore('settings', {
   state: () => ({
     prefs: loadLocal(),
+    /** customModel 是 L3 访客自定义端点（FR-403）。apiKey 只在内存。 */
+    customModel: loadCustom(),
     /** serverSynced 表示服务端偏好已拉取过（拉取后以服务端为准）。 */
     serverSynced: false,
   }),
   getters: {
     theme: (s) => s.prefs.theme,
+    /** customReady：自定义模型三要素齐全。 */
+    customReady: (s) => !!(s.customModel.baseURL && s.customModel.model && s.customModel.apiKey),
   },
   actions: {
+    /** saveCustom 保存自定义端点；apiKey 只进内存，baseURL/model 落 localStorage。 */
+    saveCustom(c: Partial<CustomModel>) {
+      this.customModel = { ...this.customModel, ...c };
+      try {
+        localStorage.setItem(CUSTOM_KEY, JSON.stringify({
+          baseURL: this.customModel.baseURL,
+          model: this.customModel.model,
+        }));
+      } catch {
+        // 忽略存储失败。
+      }
+    },
     /** applyTheme 把主题写到 html.dark 并持久化（FR-1001）。 */
     applyTheme(theme: 'light' | 'dark') {
       this.patch({ theme });

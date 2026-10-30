@@ -1,0 +1,24 @@
+
+> fluentread-web@0.1.0 build
+> vue-tsc --noEmit && vite build
+
+vite v6.4.5 building for production...
+transforming...
+✓ 1458 modules transformed.
+rendering chunks...
+[plugin vite:reporter] 
+(!) /Users/openpie/Desktop/worker/notebook/pluging/FluentRead-Go/web/src/stores/settings.ts is dynamically imported by /Users/openpie/Desktop/worker/notebook/pluging/FluentRead-Go/web/src/stores/workbench.ts but also statically imported by /Users/openpie/Desktop/worker/notebook/pluging/FluentRead-Go/web/src/App.vue?vue&type=script&setup=true&lang.ts, /Users/openpie/Desktop/worker/notebook/pluging/FluentRead-Go/web/src/components/TopBar.vue?vue&type=script&setup=true&lang.ts, /Users/openpie/Desktop/worker/notebook/pluging/FluentRead-Go/web/src/views/SettingsView.vue?vue&type=script&setup=true&lang.ts, /Users/openpie/Desktop/worker/notebook/pluging/FluentRead-Go/web/src/views/WriteView.vue?vue&type=script&setup=true&lang.ts, dynamic import will not move module into another chunk.
+
+computing gzip size...
+dist/index.html                         1.35 kB │ gzip:   0.86 kB
+dist/assets/style-CsA5Ub0Z.css        346.73 kB │ gzip:  49.08 kB
+dist/assets/ReviewView-UFEy-w8C.js      0.51 kB │ gzip:   0.45 kB
+dist/assets/WordsView-BXZJjsR-.js       0.58 kB │ gzip:   0.50 kB
+dist/assets/SettingsView-CrJOBbkA.js    6.98 kB │ gzip:   2.86 kB
+dist/assets/index-Dve8spiV.js         998.14 kB │ gzip: 330.48 kB
+
+(!) Some chunks are larger than 200 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 2.25s

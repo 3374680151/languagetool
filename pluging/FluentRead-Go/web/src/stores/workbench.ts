@@ -43,6 +43,8 @@ export interface Segment {
   model?: string;
   /** degraded 该段走了免费方式（FR-306）。 */
   degraded?: boolean;
+  /** customFailed 自定义模型失败已回落默认线路（FR-405）。 */
+  customFailed?: boolean;
 }
 
 interface DraftPayload {
@@ -64,6 +66,8 @@ export const useWorkbenchStore = defineStore('workbench', {
     degradedReason: '',
     /** unconfigured 站点未配置模型（六态之"未配置"）。 */
     unconfigured: false,
+    /** customFailedSeen 本次翻译中出现过"自定义模型失败已回落"（FR-405 提示用）。 */
+    customFailedSeen: false,
     /** glossaryFingerprint 是上次全译成功时的术语指纹（FR-503，P4 接入）。 */
     glossaryFingerprint: '',
     /** pendingFocus 拆段后组件应聚焦的段与光标位（Enter×2 流畅开新段）。 */
@@ -313,17 +317,29 @@ export const useWorkbenchStore = defineStore('workbench', {
       try {
         const { useSettingsStore } = await import('./settings');
         const settings = useSettingsStore();
+        // L3 自定义端点：选择"自定义模型"且三要素齐全时携带（FR-403/404）。
+        const useCustom = settings.prefs.model === 'custom' && settings.customReady;
         const resp = await postTranslate(
           {
             segments: batch.map((s) => ({ text: s.source })),
             from: settings.prefs.langPair.from,
             to: settings.prefs.langPair.to,
             style: settings.prefs.style,
-            model: settings.prefs.model || undefined,
+            model: settings.prefs.model === 'custom' ? undefined : settings.prefs.model || undefined,
+            custom: useCustom
+              ? {
+                  baseURL: settings.customModel.baseURL,
+                  apiKey: settings.customModel.apiKey,
+                  model: settings.customModel.model,
+                }
+              : undefined,
           },
           { signal: this._abort?.signal },
         );
         this.applyResults(batch, resp.segments);
+        if (resp.segments.some((s) => s.customFailed)) {
+          this.customFailedSeen = true;
+        }
         if (resp.degradedReason) {
           this.degradedReason = resp.degradedReason;
         }
@@ -345,6 +361,7 @@ export const useWorkbenchStore = defineStore('workbench', {
           seg.ms = r.ms;
           seg.model = r.model;
           seg.degraded = r.degraded;
+          seg.customFailed = r.customFailed;
           seg.error = undefined;
         } else if (r.status === 'skipped') {
           // 空白段：不算错误，回到待译（正常流程不该出现——前端只发非空段）。

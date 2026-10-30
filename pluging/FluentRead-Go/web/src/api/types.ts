@@ -90,13 +90,14 @@ export interface Quota {
   unlimited: boolean;
 }
 
-/** 翻译请求：逐段（§7.4）。 */
+/** 翻译请求：逐段（§7.4）。custom 是 L3 访客自定义端点（FR-403）。 */
 export interface TranslateRequest {
   segments: { text: string }[];
   from: string;
   to: string;
   style?: string;
   model?: string;
+  custom?: { baseURL: string; apiKey: string; model: string };
 }
 
 /** 单段结果。status: ok|skipped|failed。 */

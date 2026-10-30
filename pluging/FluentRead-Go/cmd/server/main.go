@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -90,6 +91,41 @@ func main() {
 		cache = gateway.NewCache(0, 0, 0)
 	}
 	pool := gateway.NewPool(client, free, cfg, catalog, cache, cfg.UpstreamTimeout)
+
+	// Step 3.5: 模型池巡检（FR-1103）：启动时 + 每小时对账；
+	// 间隔可经 FR_INSPECT_INTERVAL_SECONDS 覆盖（测试用），<=0 时禁用定时只跑启动那轮。
+	inspectInterval := 1 * time.Hour
+	if v := os.Getenv("FR_INSPECT_INTERVAL_SECONDS"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			inspectInterval = time.Duration(n) * time.Second
+		}
+	}
+	go func() {
+		runInspect := func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			live := map[string]bool{}
+			if ids, err := client.Models(ctx); err != nil {
+				slog.Warn("模型清单对账失败，本轮保留现状", "err", err)
+				pool.Inspect(nil)
+				return
+			} else {
+				for _, id := range ids {
+					live[id] = true
+				}
+			}
+			pool.Inspect(live)
+		}
+		runInspect()
+		if inspectInterval <= 0 {
+			return
+		}
+		ticker := time.NewTicker(inspectInterval)
+		defer ticker.Stop()
+		for range ticker.C {
+			runInspect()
+		}
+	}()
 
 	// Step 4: 服务层与 HTTP 层。
 	translator := service.NewTranslator(pool, store.NewUsageRepo(db), cfg)

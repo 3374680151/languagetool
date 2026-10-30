@@ -44,6 +44,9 @@ var (
 	faultMS int
 	// keyStatus 按 Authorization 注入按密钥的失败（验证 FR-1102 多 Key 轮换）。
 	keyStatus sync.Map // key -> int
+	// hiddenModels 是粘性的"从 /v1/models 隐藏掉的模型"（巡检对账测试用，FR-1103）。
+	hiddenModels = map[string]bool{}
+	hiddenMu     sync.RWMutex
 )
 
 // zhTemplates 是中文假译文模板池（规格默认语言对 英→中，FR-101）。
@@ -127,10 +130,15 @@ func main() {
 		if !applyFault2(w, r) {
 			return
 		}
+		hiddenMu.RLock()
 		data := make([]map[string]any, 0, len(models))
 		for _, id := range models {
+			if hiddenModels[id] {
+				continue
+			}
 			data = append(data, map[string]any{"id": id, "object": "model"})
 		}
+		hiddenMu.RUnlock()
 		writeJSON(w, http.StatusOK, map[string]any{"object": "list", "data": data})
 	})
 
@@ -210,9 +218,15 @@ func main() {
 			keyFails[fmt.Sprintf("%v", k)] = v.(int)
 			return true
 		})
+		hiddenMu.RLock()
+		hidden := make([]string, 0, len(hiddenModels))
+		for id := range hiddenModels {
+			hidden = append(hidden, id)
+		}
+		hiddenMu.RUnlock()
 		writeJSON(w, http.StatusOK, map[string]any{
 			"chat": counts.chat.Load(), "models": counts.model.Load(), "free": counts.free.Load(),
-			"fault": mode, "faultMs": ms, "keyStatus": keyFails,
+			"fault": mode, "faultMs": ms, "keyStatus": keyFails, "hidden": hidden,
 		})
 	})
 
@@ -224,6 +238,9 @@ func main() {
 		fault, faultMS = "", 0
 		faultMu.Unlock()
 		keyStatus = sync.Map{}
+		hiddenMu.Lock()
+		hiddenModels = map[string]bool{}
+		hiddenMu.Unlock()
 		writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 	})
 
@@ -232,6 +249,16 @@ func main() {
 		ms := 0
 		if v := r.URL.Query().Get("ms"); v != "" {
 			_, _ = fmt.Sscanf(v, "%d", &ms)
+		}
+		if m := r.URL.Query().Get("models"); m != "" || r.URL.Query().Has("models") {
+			hiddenMu.Lock()
+			hiddenModels = map[string]bool{}
+			for _, name := range strings.Split(m, ",") {
+				if name = strings.TrimSpace(name); name != "" {
+					hiddenModels[name] = true
+				}
+			}
+			hiddenMu.Unlock()
 		}
 		if key := r.URL.Query().Get("key"); key != "" {
 			st := 0

@@ -18,6 +18,7 @@ package gateway
 import (
 	"context"
 	"log/slog"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -82,11 +83,18 @@ type Pool struct {
 	timeout time.Duration
 	// degraded 是巡检降级标记（FR-1103）：有 enabled 模型连续对账失败即置位。
 	degraded atomic.Bool
+	// modelFails 记每个模型连续对账失败的次数（Inspect 维护）。
+	modelFails map[string]int
+	// modelMu 保护 modelFails 与 degraded 的读写一致性。
+	modelMu sync.Mutex
 }
 
 // NewPool 构造池。free 传 nil 表示禁用降级（FR_FALLBACK_TYPE 为空）。
 func NewPool(client *Client, free *MyMemory, cfg *config.Config, catalog *config.Catalog, cache *Cache, timeout time.Duration) *Pool {
-	return &Pool{client: client, free: free, cfg: cfg, catalog: catalog, cache: cache, timeout: timeout}
+	return &Pool{
+		client: client, free: free, cfg: cfg, catalog: catalog, cache: cache, timeout: timeout,
+		modelFails: make(map[string]int),
+	}
 }
 
 // Cache 暴露缓存（service 层构造缓存键用）。

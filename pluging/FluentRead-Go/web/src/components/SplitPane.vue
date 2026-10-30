@@ -202,6 +202,7 @@ watch(() => doc.segments.length, () => nextTick(growAll));
               @input="onTargetInput(seg, $event)"
             />
             <div class="split__dst-meta">
+              <el-tag v-if="seg.customFailed" size="small" type="warning" effect="plain" data-test="custom-fallback-tag">自定义模型不可用，已用默认模型</el-tag>
               <el-tag v-if="seg.edited" size="small" type="warning" effect="plain">已手改</el-tag>
               <span v-if="seg.ms !== undefined" class="faint">{{ seg.ms }}ms</span>
             </div>

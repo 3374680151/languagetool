@@ -1,0 +1,82 @@
+PASS  go vet ./...
+PASS  go test ./...
+PASS  CGO_ENABLED=0 go build
+PASS  前端构建（含 vue-tsc）
+PASS  go vet ./...
+PASS  go test ./...
+PASS  CGO_ENABLED=0 go build
+PASS  前端构建（含 vue-tsc）
+FAIL  FR-409 拒绝原因不符
+PASS  初始下拉含 enabled 模型，禁用占位模板不下发（FR-402/409）
+PASS  FR-1103 连续失败模型已从下拉剔除，health 置 degraded
+PASS  FR-1103 剔除动作记 WARN 日志
+PASS  FR-1103 上游恢复后模型自动回到下拉
+PASS  自定义模型测试连接成功且响应不含密钥
+PASS  FR-404 响应 no-store
+PASS  FR-404 服务端日志无密钥
+FAIL  Playwright P3.5
+PASS  go vet ./...
+PASS  go test ./...
+PASS  CGO_ENABLED=0 go build
+PASS  前端构建（含 vue-tsc）
+FAIL  FR-409 拒绝原因不符
+PASS  初始下拉含 enabled 模型，禁用占位模板不下发（FR-402/409）
+PASS  FR-1103 连续失败模型已从下拉剔除，health 置 degraded
+PASS  FR-1103 剔除动作记 WARN 日志
+PASS  FR-1103 上游恢复后模型自动回到下拉
+PASS  自定义模型测试连接成功且响应不含密钥
+PASS  FR-404 响应 no-store
+PASS  FR-404 服务端日志无密钥
+FAIL  Playwright P3.5
+PASS  go vet ./...
+PASS  go test ./...
+PASS  CGO_ENABLED=0 go build
+PASS  前端构建（含 vue-tsc）
+FAIL  FR-409 拒绝原因不符
+PASS  初始下拉含 enabled 模型，禁用占位模板不下发（FR-402/409）
+PASS  FR-1103 连续失败模型已从下拉剔除，health 置 degraded
+PASS  FR-1103 剔除动作记 WARN 日志
+PASS  FR-1103 上游恢复后模型自动回到下拉
+PASS  自定义模型测试连接成功且响应不含密钥
+PASS  FR-404 响应 no-store
+PASS  FR-404 服务端日志无密钥
+FAIL  Playwright P3.5
+PASS  go vet ./...
+PASS  go test ./...
+PASS  CGO_ENABLED=0 go build
+PASS  前端构建（含 vue-tsc）
+FAIL  FR-409 拒绝原因不符
+PASS  初始下拉含 enabled 模型，禁用占位模板不下发（FR-402/409）
+PASS  FR-1103 连续失败模型已从下拉剔除，health 置 degraded
+PASS  FR-1103 剔除动作记 WARN 日志
+PASS  FR-1103 上游恢复后模型自动回到下拉
+PASS  自定义模型测试连接成功且响应不含密钥
+PASS  FR-404 响应 no-store
+PASS  FR-404 服务端日志无密钥
+FAIL  Playwright P3.5
+PASS  go vet ./...
+PASS  go test ./...
+PASS  CGO_ENABLED=0 go build
+PASS  前端构建（含 vue-tsc）
+PASS  FR-409 占位模型启用被启动校验拒绝
+PASS  初始下拉含 enabled 模型，禁用占位模板不下发（FR-402/409）
+PASS  FR-1103 连续失败模型已从下拉剔除，health 置 degraded
+PASS  FR-1103 剔除动作记 WARN 日志
+PASS  FR-1103 上游恢复后模型自动回到下拉
+PASS  自定义模型测试连接成功且响应不含密钥
+PASS  FR-404 响应 no-store
+PASS  FR-404 服务端日志无密钥
+FAIL  Playwright P3.5
+PASS  go vet ./...
+PASS  go test ./...
+PASS  CGO_ENABLED=0 go build
+PASS  前端构建（含 vue-tsc）
+PASS  FR-409 占位模型启用被启动校验拒绝
+PASS  初始下拉含 enabled 模型，禁用占位模板不下发（FR-402/409）
+PASS  FR-1103 连续失败模型已从下拉剔除，health 置 degraded
+PASS  FR-1103 剔除动作记 WARN 日志
+PASS  FR-1103 上游恢复后模型自动回到下拉
+PASS  自定义模型测试连接成功且响应不含密钥
+PASS  FR-404 响应 no-store
+PASS  FR-404 服务端日志无密钥
+PASS  Playwright P3.5（下拉/自定义测试连接与翻译/失败回落提示）

@@ -1,0 +1,1 @@
+{"ok":true,"data":{"degraded":false,"models":[{"id":"deepseek-chat","label":"DeepSeek","role":"primary","quality":"高","speed":"快","cost":"低","health":"ok"},{"id":"qwen-plus","label":"通义千问","role":"pool","quality":"中","speed":"快","cost":"低","health":"ok"}]}}

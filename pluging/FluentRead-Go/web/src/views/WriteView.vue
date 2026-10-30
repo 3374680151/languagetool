@@ -8,7 +8,7 @@
   模块边界：状态在 stores；网络只经 api/client；组件不直接 fetch。
 -->
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { ArrowRight, Switch } from '@element-plus/icons-vue';
 import SplitPane from '../components/SplitPane.vue';
 import ProofreadPanel from '../components/ProofreadPanel.vue';
@@ -89,6 +89,14 @@ function ignoreSuggestion(index: number) {
 
 const activeSegId = ref<number | null>(null);
 
+/** defaultModelLabel 顶栏下拉里"默认模型"的显示名（FR-401）。 */
+const defaultModelLabel = computed(() => {
+  const d = config.data?.defaultModel;
+  if (!d) return '默认模型';
+  const m = config.models.find((x) => x.id === d);
+  return m ? `默认（${m.label}）` : '默认模型';
+});
+
 // 语言对下拉：目标语言不含 auto（FR-101/112：默认英→中，可改但新访客默认不变）。
 const fromOptions = Languages;
 const toOptions = Languages.filter((l) => l.id !== 'auto');
@@ -133,6 +141,10 @@ async function onTranslateAll(force = false) {
 
 /** syncQuota 翻译后同步额度（FR-606：快用完才提示）。 */
 async function syncQuota(beforeDone: number) {
+  if (doc.customFailedSeen) {
+    doc.customFailedSeen = false;
+    ui.toast('warn', '自定义模型不可用，已改用默认模型');
+  }
   const delta = doc.stats.done - beforeDone;
   if (delta > 0) {
     quota.consume(delta);
@@ -255,6 +267,25 @@ function setActive(id: number) {
         @update:model-value="(v: string) => settings.patch({ style: v })"
       >
         <el-option v-for="s in styleOptions" :key="s.value" :value="s.value" :label="s.label" />
+      </el-select>
+
+      <!-- 模型下拉（FR-402/408）：巡检剔除后的站点池 + 自定义入口 -->
+      <el-select
+        :model-value="settings.prefs.model"
+        size="small"
+        class="toolbar__model"
+        data-test="model-select"
+        aria-label="模型"
+        @update:model-value="(v: string) => settings.patch({ model: v })"
+      >
+        <el-option value="" :label="defaultModelLabel" />
+        <el-option
+          v-for="m in config.models"
+          :key="m.id"
+          :value="m.id"
+          :label="`${m.label}（${m.quality}·${m.speed}·${m.cost}）`"
+        />
+        <el-option value="custom" label="自定义模型…" />
       </el-select>
 
       <el-button
@@ -389,6 +420,11 @@ function setActive(id: number) {
 
 .toolbar__style {
   width: 96px;
+  flex: none;
+}
+
+.toolbar__model {
+  width: 190px;
   flex: none;
 }
 

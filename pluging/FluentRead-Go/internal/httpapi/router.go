@@ -48,6 +48,8 @@ func NewRouter(app *handler.App) *gin.Engine {
 	api.GET("/user/prefs", app.Prefs)
 	api.PUT("/user/prefs", app.PutPrefs)
 	api.POST("/proofread", app.Proofread)
+	api.GET("/models", app.Models)
+	api.POST("/models/test", app.ModelTest)
 
 	// 接口层 404 必须是 JSON 统一响应包，否则前端会把 HTML 当 JSON 解析；
 	// 其余路径交给单页应用：静态资源直出，前端路由回落 index.html。
