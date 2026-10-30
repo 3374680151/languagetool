@@ -1,0 +1,12 @@
+
+Running 7 tests using 1 worker
+
+  ✓  1 e2e/p1.spec.ts:50:3 › P1 翻译链路 › 粘贴 4 段 + 空行得到 4 个输入框，段号连续（FR-104/105） (640ms)
+  ✓  2 e2e/p1.spec.ts:60:3 › P1 翻译链路 › Ctrl+Enter 全译：4 段都出中文，状态"完成"（FR-106/107） (465ms)
+  ✓  3 e2e/p1.spec.ts:73:3 › P1 翻译链路 › 1 段失败不影响其他段（P1 出口标准 / FR-303） (650ms)
+  ✓  4 e2e/p1.spec.ts:98:3 › P1 翻译链路 › NFR-1：单段首译 ≤ 1 秒（假网关基线） (443ms)
+  ✓  5 e2e/p1.spec.ts:108:3 › P1 翻译链路 › 逐行对齐：每行左右顶端偏差 ≤ 2px（FR-102） (453ms)
+  ✓  6 e2e/p1.spec.ts:125:3 › P1 翻译链路 › 刷新不丢稿：段落、译文、手改标记都在（FR-110） (480ms)
+  ✓  7 e2e/p1.spec.ts:142:3 › P1 翻译链路 › Ctrl+Shift+Enter 只译光标段（FR-106） (547ms)
+
+  7 passed (4.4s)

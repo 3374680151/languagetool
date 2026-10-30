@@ -140,6 +140,11 @@ type TranslateResponse struct {
 // Translate 执行整批翻译。调用前配额预扣已由本方法完成；
 // ctx 由 handler 提供（请求取消会传导到上游调用）。
 func (t *Translator) Translate(ctx context.Context, visitorID string, req *TranslateRequest) (*TranslateResponse, error) {
+	// Step 0: 分段校验（FR-301/302/305）：空/超长/超段数/语言码，全部发生在打上游之前。
+	if err := req.Validate(); err != nil {
+		return nil, err
+	}
+
 	// Step 1: 访客日配额预扣（FR-601/604）：只算非空白段；在打上游之前完成。
 	segments, chars := billable(req.Segments)
 	decision, err := t.usage.Consume(visitorID, segments, chars, t.cfg.VisitorDailySegments)

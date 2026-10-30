@@ -46,7 +46,30 @@ var (
 	keyStatus sync.Map // key -> int
 )
 
-// englishTemplates 是确定性假译文的模板池。
+// zhTemplates 是中文假译文模板池（规格默认语言对 英→中，FR-101）。
+// 必须含 CJK：结果校验（§7.6）会拒绝"目标中文却无 CJK"的译文。
+var zhTemplates = []string{
+	"检索增强生成把模型锚定在检索到的文档上，让回答更有依据。",
+	"回答之前，系统先从知识库里召回最相关的段落。",
+	"段落边界被保留下来，每一段都可以独立翻译和修改。",
+	"术语在站点级别锁定，长文里的措辞因此保持一致。",
+	"失败的段落会在原地标出，可以单独重试，不必重跑整篇。",
+	"编辑器不打扰写作：作者还在打字时不会自动翻译。",
+	"每位访客都有一个匿名身份，收藏的词跟着浏览器走。",
+	"配额按翻译的段落计费，空行不消耗当日额度。",
+	"付费额度用完时，服务会自动切到免费方式，而不是直接失败。",
+	"错误提示要告诉读者下一步做什么，而不是只说出了问题。",
+	"双栏逐行对齐，读者一眼就能找到每段译文对应的原文。",
+	"导出的 Markdown 把原文和译文放在一起，方便以后复查。",
+}
+
+// jaTemplates 是日文假译文模板池。
+var jaTemplates = []string{
+	"検索拡張生成は、検索した文書に基づいて回答の質を高めます。",
+	"回答の前に、システムは知識ベースから最も関連の高い段落を取得します。",
+}
+
+// englishTemplates 是拉丁语系假译文模板池（英/法/德/西/俄目标共用）。
 var englishTemplates = []string{
 	"Retrieval-augmented generation improves answer quality by grounding the model in retrieved documents.",
 	"Before answering, the system first recalls the most relevant passages from the knowledge base.",
@@ -62,12 +85,32 @@ var englishTemplates = []string{
 	"The exported Markdown keeps the source and the translation side by side for later review.",
 }
 
-// freeTemplates 是免费线路的假译文，故意与付费线路不同：
+// freeTemplatesZH 是免费线路的中文假译文，故意与付费线路不同：
 // "降级后质量变化"在测试里可观测，而不是只靠一个布尔值。
-var freeTemplates = []string{
+var freeTemplatesZH = []string{
+	"[免费] 这是免费方式的机翻结果。",
+	"[免费] 免费方式给出的句子更短、更朴素。",
+	"[免费] 免费方式的结果能读，但不够发表。",
+}
+
+// freeTemplatesEN 是免费线路的拉丁语系假译文。
+var freeTemplatesEN = []string{
 	"[free] This is a machine translation from the free line.",
 	"[free] The free line returns a shorter, plainer sentence.",
 	"[free] Free line output, good enough to read but not to publish.",
+}
+
+// pickPoolByTarget 按系统提示词里的目标语言选模板池。
+// 假译文必须与目标语言一致，否则 §7.6 的语种校验会正确地拒绝它。
+func pickPoolByTarget(system string) []string {
+	switch {
+	case strings.Contains(system, "简体中文") || strings.Contains(system, "繁體中文") || strings.Contains(system, "中文"):
+		return zhTemplates
+	case strings.Contains(system, "日本語"):
+		return jaTemplates
+	default:
+		return englishTemplates
+	}
 }
 
 func main() {
@@ -119,6 +162,13 @@ func main() {
 		}
 
 		system, user := splitMessages(body.Messages)
+		// 内容标记的段级故障：让 e2e 能在同一次请求里制造"1 段失败、2 段成功"。
+		// 标记写在段落文本里：[[fail]] 500 / [[timeout]] 超时 / [[empty]] 空译文 / [[echo]] 回显。
+		if marker := contentFault(user); marker != "" {
+			if !applyFault(w, r, marker, 0) {
+				return
+			}
+		}
 		content := fakeContent(system, user, body.Model)
 		writeJSON(w, http.StatusOK, map[string]any{
 			"id":      "chatcmpl-fake",
@@ -136,8 +186,15 @@ func main() {
 			return
 		}
 		q := r.URL.Query().Get("q")
+		// 免费线路也按目标语言给假译文（langpair=en|zh-CN → 中文）。
+		pool := freeTemplatesEN
+		if to, _, ok := strings.Cut(r.URL.Query().Get("langpair"), "|"); ok {
+			if strings.HasPrefix(to, "zh") {
+				pool = freeTemplatesZH
+			}
+		}
 		writeJSON(w, http.StatusOK, map[string]any{
-			"responseData":    map[string]any{"translatedText": pick(freeTemplates, q)},
+			"responseData":    map[string]any{"translatedText": pick(pool, q)},
 			"responseStatus":  200,
 			"responseDetails": "",
 		})
@@ -197,6 +254,21 @@ func main() {
 	if err := http.ListenAndServe(*addr, mux); err != nil {
 		log.Fatal(err)
 	}
+}
+
+// contentFault 从用户文本里解析段级故障标记；无标记返回空串。
+func contentFault(user string) string {
+	switch {
+	case strings.Contains(user, "[[fail]]"):
+		return "500"
+	case strings.Contains(user, "[[timeout]]"):
+		return "timeout"
+	case strings.Contains(user, "[[empty]]"):
+		return "empty"
+	case strings.Contains(user, "[[echo]]"):
+		return "echo"
+	}
+	return ""
 }
 
 // resolveFault 决定本次请求的故障模式：query 优先，其次粘性开关。
@@ -315,7 +387,7 @@ func fakeContent(system, user, model string) string {
 	case strings.Contains(system, "词典") || strings.Contains(low, "dictionary") || strings.Contains(low, "英汉词典"):
 		return dictFake(user)
 	}
-	out := pick(englishTemplates, user)
+	out := pick(pickPoolByTarget(system), user)
 	if model != "" {
 		// 让"换模型"在输出上可观测，否则切换下拉看不出任何差别。
 		out = "[" + model + "] " + out

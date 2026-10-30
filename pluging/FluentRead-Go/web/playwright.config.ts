@@ -44,6 +44,8 @@ export default defineConfig({
     launchOptions: executablePath ? { executablePath } : {},
     viewport: { width: 1280, height: 880 },
     locale: 'zh-CN',
+    // 组件里的测试锚点统一用 data-test 属性。
+    testIdAttribute: 'data-test',
     // 失败时留截图与 trace，成功不留，避免证据目录塞满。
     screenshot: 'only-on-failure',
     trace: 'retain-on-failure',

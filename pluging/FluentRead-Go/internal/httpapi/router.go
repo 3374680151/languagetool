@@ -40,8 +40,9 @@ func NewRouter(app *handler.App) *gin.Engine {
 	// 词表、偏好、配额随访客 cookie 关联。
 	visitor := middleware.Visitor(app.VisitorRepo)
 
-	// 未来的业务端点（P1 起追加 translate / quota / config / prefs / ...）挂到
-	// 带 visitor 中间件的 /api 组上。
+	// 未来的业务端点挂到带 visitor 中间件的 /api 组上。
+	api := r.Group("/api", visitor)
+	api.POST("/translate", app.Translate)
 
 	// 接口层 404 必须是 JSON 统一响应包，否则前端会把 HTML 当 JSON 解析；
 	// 其余路径交给单页应用：静态资源直出，前端路由回落 index.html。

@@ -1,0 +1,1 @@
+{"ok":true,"data":{"segments":[{"status":"ok","text":"[deepseek-chat] 错误提示要告诉读者下一步做什么，而不是只说出了问题。 §d7c6d9-65adaa","model":"deepseek-chat"},{"status":"failed","code":"UPSTREAM_UNAVAILABLE","message":"翻译服务暂时不可用，请稍后重试"},{"status":"ok","text":"[deepseek-chat] 双栏逐行对齐，读者一眼就能找到每段译文对应的原文。 §8bb7c6-65adaa","model":"deepseek-chat"}],"model":"deepseek-chat"}}

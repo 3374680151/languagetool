@@ -1,0 +1,46 @@
+PASS  go vet ./...
+PASS  go test ./...
+PASS  CGO_ENABLED=0 go build
+PASS  前端构建（含 vue-tsc）
+PASS  go vet ./...
+PASS  go test ./...
+PASS  CGO_ENABLED=0 go build
+PASS  前端构建（含 vue-tsc）
+PASS  3 段中 1 段失败另 2 段成功（FR-303）
+PASS  NFR-1 计时（本机假网关 <1s/段；3 段含失败共 32ms）
+FAIL  Playwright P1
+PASS  go vet ./...
+PASS  go test ./...
+PASS  CGO_ENABLED=0 go build
+PASS  前端构建（含 vue-tsc）
+PASS  3 段中 1 段失败另 2 段成功（FR-303）
+PASS  NFR-1 计时（本机假网关 <1s/段；3 段含失败共 31ms）
+FAIL  Playwright P1
+PASS  go vet ./...
+PASS  go test ./...
+PASS  CGO_ENABLED=0 go build
+PASS  前端构建（含 vue-tsc）
+PASS  3 段中 1 段失败另 2 段成功（FR-303）
+PASS  NFR-1 计时（本机假网关 <1s/段；3 段含失败共 31ms）
+FAIL  Playwright P1
+PASS  go vet ./...
+PASS  go test ./...
+PASS  CGO_ENABLED=0 go build
+PASS  前端构建（含 vue-tsc）
+PASS  3 段中 1 段失败另 2 段成功（FR-303）
+PASS  NFR-1 计时（本机假网关 <1s/段；3 段含失败共 32ms）
+FAIL  Playwright P1
+PASS  go vet ./...
+PASS  go test ./...
+PASS  CGO_ENABLED=0 go build
+PASS  前端构建（含 vue-tsc）
+PASS  3 段中 1 段失败另 2 段成功（FR-303）
+PASS  NFR-1 计时（本机假网关 <1s/段；3 段含失败共 34ms）
+FAIL  Playwright P1
+PASS  go vet ./...
+PASS  go test ./...
+PASS  CGO_ENABLED=0 go build
+PASS  前端构建（含 vue-tsc）
+PASS  3 段中 1 段失败另 2 段成功（FR-303）
+PASS  NFR-1 计时（本机假网关 <1s/段；3 段含失败共 32ms）
+PASS  Playwright P1（分段/全译/失败隔离/对齐/草稿/单段译）
