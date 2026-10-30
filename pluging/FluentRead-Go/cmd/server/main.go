@@ -46,6 +46,17 @@ func main() {
 		slog.Warn("配置提醒", "detail", warning)
 	}
 
+	// 复习间隔覆盖（测试钩子）：FR_REVIEW_STAGES=分钟序列，默认 10/1天/3天/7天/14天/30天。
+	if v := os.Getenv("FR_REVIEW_STAGES"); v != "" {
+		var minutes []float64
+		for _, part := range strings.Split(v, ",") {
+			if f, err := strconv.ParseFloat(strings.TrimSpace(part), 64); err == nil && f > 0 {
+				minutes = append(minutes, f)
+			}
+		}
+		store.SetReviewStages(minutes)
+	}
+
 	// Step 1: 数据库（GORM + glebarez 纯 Go 驱动，DR-3）。
 	db, err := store.Open(cfg.DBPath)
 	if err != nil {

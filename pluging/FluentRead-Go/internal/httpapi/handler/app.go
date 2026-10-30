@@ -52,6 +52,8 @@ type App struct {
 	DictLimiter *ratelimit.Limiter
 	// WordRepo 是词表存取（查词卡已收藏态 + P5 词表）。
 	WordRepo *store.WordRepo
+	// MistakeRepo 是错误本存取（P5.5）。
+	MistakeRepo *store.MistakeRepo
 	// GlossaryRepo 是术语存取（P4）。
 	GlossaryRepo *store.GlossaryRepo
 	// Translator 是翻译编排。
@@ -74,7 +76,8 @@ func NewApp(cfg *config.Config, catalog *config.Catalog, db *gorm.DB, pool *gate
 		Dictionary: dictionary,
 		DictCache:  gateway.NewCache(2000, 8<<20, 24*time.Hour),
 		DictLimiter: ratelimit.New(cfg.DictRatePerMinute),
-		WordRepo:   store.NewWordRepo(db),
+		WordRepo:    store.NewWordRepo(db),
+		MistakeRepo: store.NewMistakeRepo(db),
 		GlossaryRepo: store.NewGlossaryRepo(db),
 		Assets: assets,
 	}

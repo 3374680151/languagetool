@@ -19,6 +19,7 @@ import (
 )
 
 // ReviewStages 是复习间隔序列（FR-1204）：10 分钟/1/3/7/14/30 天。
+// 可被 FR_REVIEW_STAGES 覆盖（逗号分隔的分钟数，测试钩子）。
 var ReviewStages = []time.Duration{
 	10 * time.Minute,
 	24 * time.Hour,
@@ -26,6 +27,22 @@ var ReviewStages = []time.Duration{
 	7 * 24 * time.Hour,
 	14 * 24 * time.Hour,
 	30 * 24 * time.Hour,
+}
+
+// SetReviewStages 用分钟数覆盖复习间隔（main 启动时调用；供测试缩短）。
+func SetReviewStages(minutes []float64) {
+	if len(minutes) == 0 {
+		return
+	}
+	stages := make([]time.Duration, 0, len(minutes))
+	for _, m := range minutes {
+		if m > 0 {
+			stages = append(stages, time.Duration(m*float64(time.Minute)))
+		}
+	}
+	if len(stages) > 0 {
+		ReviewStages = stages
+	}
 }
 
 // normalizeWord 归一化查询词：小写、去首尾空白与常见标点（§八 8.2 预处理规则）。
@@ -92,6 +109,11 @@ func (r *WordRepo) List(visitorID, sort string) ([]Word, error) {
 // Delete 删除一个收藏词（只能删自己的）。
 func (r *WordRepo) Delete(visitorID string, id int64) error {
 	return r.db.Where("visitor_id = ?", visitorID).Delete(&Word{}, id).Error
+}
+
+// Clear 确认清空词表（FR-1205；二次确认由前端完成）。
+func (r *WordRepo) Clear(visitorID string) error {
+	return r.db.Where("visitor_id = ?", visitorID).Delete(&Word{}).Error
 }
 
 // MarkUsed 使用次数 +1 并刷新 last_used_at（FR-1202：再使用标记）。

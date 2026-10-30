@@ -70,11 +70,23 @@ async function runProofread() {
   }
 }
 
-/** acceptSuggestion 接受建议：替换原文后重新校验剩余条目位置（FR-205）。 */
-function acceptSuggestion(index: number) {
+/** acceptSuggestion 接受建议：写入错误本（FR-1203）→ 替换原文 → 重定位剩余条目（FR-205）。 */
+async function acceptSuggestion(index: number) {
   const st = proofState.value;
   const s = st.suggestions[index];
   if (!s) return;
+  // FR-1203：接受即自动存错误本（原片段/改法/类别/理由）；失败不打断修改。
+  try {
+    const { postMistake } = await import('../api/client');
+    await postMistake({
+      sourceSnippet: s.original,
+      correctedSnippet: s.suggestion,
+      category: s.category,
+      reason: s.reason,
+    });
+  } catch {
+    ui.toast('warn', '错误本记录失败，本次修改仍然生效');
+  }
   const updated = doc.applySuggestion(st.segmentId, s.original, s.suggestion);
   if (updated !== null) {
     // 重新校验：original 不再是子串的建议（含刚接受的那条）移除（FR-205/204）。

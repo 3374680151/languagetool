@@ -1,0 +1,6 @@
+
+Running 1 test using 1 worker
+
+  ✓  1 e2e/p5.5-review.spec.ts:26:1 › FR-1204 复习闭环：到期入口 → 挖空自己的句子 → 两键评分 (9.5s)
+
+  1 passed (9.9s)

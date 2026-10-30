@@ -168,6 +168,9 @@ export function deleteWord(id: number) {
 }
 
 /** 错误本与复习（P5.5）。 */
+export function postMistake(p: { sourceSnippet: string; correctedSnippet: string; category: string; reason: string }) {
+  return request<Mistake>('POST', '/api/mistakes', p);
+}
 export function getMistakes(category?: string) {
   const q = category ? `?category=${encodeURIComponent(category)}` : '';
   return request<Mistake[]>('GET', `/api/mistakes${q}`);
@@ -179,7 +182,7 @@ export function clearMistakes() {
   return request<{ cleared: boolean }>('DELETE', '/api/mistakes?all=1');
 }
 export function getReviewQueue() {
-  return request<ReviewItem[]>('GET', '/api/review');
+  return request<{ items: ReviewItem[]; count: number }>('GET', '/api/review');
 }
 export function postReviewScore(p: { kind: 'word' | 'mistake'; id: number; remembered: boolean }) {
   return request<{ nextDueAt: string }>('POST', '/api/review/score', p);
