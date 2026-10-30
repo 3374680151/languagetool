@@ -117,6 +117,7 @@ export interface TranslateResponse {
   degraded?: boolean;
   degradedReason?: string;
   model?: string;
+  glossaryFingerprint?: string;
 }
 
 /** 纠错建议（FR-203：四字段）。 */

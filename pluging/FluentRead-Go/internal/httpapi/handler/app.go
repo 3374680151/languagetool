@@ -12,11 +12,13 @@ package handler
 
 import (
 	"io/fs"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
 	"fluentread/internal/config"
+	"fluentread/internal/dict"
 	"fluentread/internal/gateway"
 	"fluentread/internal/httpx"
 	"fluentread/internal/ratelimit"
@@ -42,6 +44,16 @@ type App struct {
 	Limiter *ratelimit.Limiter
 	// Pool 是模型池与降级链。
 	Pool *gateway.Pool
+	// Dictionary 是 ECDICT 精简词典（P4，DR-6）；为 nil 时查词直接走模型兜底。
+	Dictionary *dict.Dictionary
+	// DictCache 是查词的服务端内存缓存（与翻译缓存同一 LRU 实现）。
+	DictCache *gateway.Cache
+	// DictLimiter 是词典模型兜底的限频器（默认 10 次/分钟/访客，§八 8.5）。
+	DictLimiter *ratelimit.Limiter
+	// WordRepo 是词表存取（查词卡已收藏态 + P5 词表）。
+	WordRepo *store.WordRepo
+	// GlossaryRepo 是术语存取（P4）。
+	GlossaryRepo *store.GlossaryRepo
 	// Translator 是翻译编排。
 	Translator *service.Translator
 	// Proofreader 是纠错编排（P3）。
@@ -51,14 +63,20 @@ type App struct {
 }
 
 // NewApp 构造依赖容器。
-func NewApp(cfg *config.Config, catalog *config.Catalog, db *gorm.DB, pool *gateway.Pool, translator *service.Translator, proofreader *service.Proofreader, assets fs.FS) *App {
+func NewApp(cfg *config.Config, catalog *config.Catalog, db *gorm.DB, pool *gateway.Pool, translator *service.Translator, proofreader *service.Proofreader, dictionary *dict.Dictionary, assets fs.FS) *App {
 	return &App{
 		Cfg: cfg, Catalog: catalog, DB: db,
 		Usage:       store.NewUsageRepo(db),
 		VisitorRepo: store.NewVisitorRepo(db),
 		PrefsRepo:   store.NewPrefsRepo(db),
 		Limiter:     ratelimit.New(cfg.RatePerMinute),
-		Pool: pool, Translator: translator, Proofreader: proofreader, Assets: assets,
+		Pool: pool, Translator: translator, Proofreader: proofreader,
+		Dictionary: dictionary,
+		DictCache:  gateway.NewCache(2000, 8<<20, 24*time.Hour),
+		DictLimiter: ratelimit.New(cfg.DictRatePerMinute),
+		WordRepo:   store.NewWordRepo(db),
+		GlossaryRepo: store.NewGlossaryRepo(db),
+		Assets: assets,
 	}
 }
 

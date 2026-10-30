@@ -1,0 +1,176 @@
+PASS  go vet ./...
+PASS  go test ./...
+PASS  CGO_ENABLED=0 go build
+PASS  前端构建（含 vue-tsc）
+PASS  AD-4 ECDICT 命中 recall（音标/词性/释义/标签）
+PASS  AD-4 感知 <100ms 量级（服务端 30ms，含 HTTP）
+PASS  AD-7 recalled 还原为 recall
+PASS  AD-4 生僻词转模型解释（source=model，带例句）
+PASS  go vet ./...
+PASS  go test ./...
+PASS  CGO_ENABLED=0 go build
+PASS  前端构建（含 vue-tsc）
+PASS  AD-4 ECDICT 命中 recall（音标/词性/释义/标签）
+PASS  AD-4 感知 <100ms 量级（服务端 30ms，含 HTTP）
+PASS  AD-7 recalled 还原为 recall
+PASS  AD-4 生僻词转模型解释（source=model，带例句）
+PASS  AD-9 查词不计翻译配额
+FAIL  AD-9 限频未生效
+PASS  FR-505 站点级覆盖用户级；返回指纹
+FAIL  Playwright P4
+PASS  go vet ./...
+PASS  go test ./...
+PASS  CGO_ENABLED=0 go build
+PASS  前端构建（含 vue-tsc）
+PASS  AD-4 ECDICT 命中 recall（音标/词性/释义/标签）
+PASS  AD-4 感知 <100ms 量级（服务端 31ms，含 HTTP）
+PASS  AD-7 recalled 还原为 recall
+PASS  AD-4 生僻词转模型解释（source=model，带例句）
+PASS  AD-9 查词不计翻译配额
+FAIL  AD-9 限频未生效
+PASS  FR-505 站点级覆盖用户级；返回指纹
+FAIL  Playwright P4
+PASS  go vet ./...
+PASS  go test ./...
+PASS  CGO_ENABLED=0 go build
+PASS  前端构建（含 vue-tsc）
+PASS  AD-4 ECDICT 命中 recall（音标/词性/释义/标签）
+PASS  AD-4 感知 <100ms 量级（服务端 32ms，含 HTTP）
+PASS  AD-7 recalled 还原为 recall
+PASS  AD-4 生僻词转模型解释（source=model，带例句）
+PASS  AD-9 查词不计翻译配额
+FAIL  AD-9 限频未生效
+PASS  FR-505 站点级覆盖用户级；返回指纹
+FAIL  Playwright P4
+PASS  go vet ./...
+PASS  go test ./...
+PASS  CGO_ENABLED=0 go build
+PASS  前端构建（含 vue-tsc）
+PASS  AD-4 ECDICT 命中 recall（音标/词性/释义/标签）
+PASS  AD-4 感知 <100ms 量级（服务端 30ms，含 HTTP）
+PASS  AD-7 recalled 还原为 recall
+PASS  AD-4 生僻词转模型解释（source=model，带例句）
+PASS  AD-9 查词不计翻译配额
+PASS  AD-9 模型兜底超限返回 429
+PASS  FR-505 站点级覆盖用户级；返回指纹
+FAIL  Playwright P4
+PASS  go vet ./...
+PASS  go test ./...
+PASS  CGO_ENABLED=0 go build
+PASS  前端构建（含 vue-tsc）
+PASS  AD-4 ECDICT 命中 recall（音标/词性/释义/标签）
+PASS  AD-4 感知 <100ms 量级（服务端 30ms，含 HTTP）
+PASS  AD-7 recalled 还原为 recall
+PASS  AD-4 生僻词转模型解释（source=model，带例句）
+PASS  AD-9 查词不计翻译配额
+PASS  AD-9 模型兜底超限返回 429
+PASS  FR-505 站点级覆盖用户级；返回指纹
+FAIL  Playwright P4
+PASS  go vet ./...
+PASS  go test ./...
+PASS  CGO_ENABLED=0 go build
+PASS  前端构建（含 vue-tsc）
+PASS  AD-4 ECDICT 命中 recall（音标/词性/释义/标签）
+PASS  AD-4 感知 <100ms 量级（服务端 33ms，含 HTTP）
+PASS  AD-7 recalled 还原为 recall
+PASS  AD-4 生僻词转模型解释（source=model，带例句）
+PASS  AD-9 查词不计翻译配额
+PASS  AD-9 模型兜底超限返回 429
+PASS  FR-505 站点级覆盖用户级；返回指纹
+FAIL  Playwright P4
+PASS  go vet ./...
+PASS  go test ./...
+PASS  CGO_ENABLED=0 go build
+PASS  前端构建（含 vue-tsc）
+PASS  AD-4 ECDICT 命中 recall（音标/词性/释义/标签）
+PASS  AD-4 感知 <100ms 量级（服务端 29ms，含 HTTP）
+PASS  AD-7 recalled 还原为 recall
+PASS  AD-4 生僻词转模型解释（source=model，带例句）
+PASS  AD-9 查词不计翻译配额
+PASS  AD-9 模型兜底超限返回 429
+PASS  FR-505 站点级覆盖用户级；返回指纹
+FAIL  Playwright P4
+PASS  go vet ./...
+PASS  go test ./...
+PASS  CGO_ENABLED=0 go build
+PASS  前端构建（含 vue-tsc）
+PASS  AD-4 ECDICT 命中 recall（音标/词性/释义/标签）
+PASS  AD-4 感知 <100ms 量级（服务端 30ms，含 HTTP）
+PASS  AD-7 recalled 还原为 recall
+PASS  AD-4 生僻词转模型解释（source=model，带例句）
+PASS  AD-9 查词不计翻译配额
+PASS  AD-9 模型兜底超限返回 429
+PASS  FR-505 站点级覆盖用户级；返回指纹
+FAIL  Playwright P4
+PASS  go vet ./...
+PASS  go test ./...
+PASS  CGO_ENABLED=0 go build
+PASS  前端构建（含 vue-tsc）
+PASS  AD-4 ECDICT 命中 recall（音标/词性/释义/标签）
+PASS  AD-4 感知 <100ms 量级（服务端 32ms，含 HTTP）
+PASS  AD-7 recalled 还原为 recall
+PASS  AD-4 生僻词转模型解释（source=model，带例句）
+PASS  AD-9 查词不计翻译配额
+PASS  AD-9 模型兜底超限返回 429
+PASS  FR-505 站点级覆盖用户级；返回指纹
+FAIL  Playwright P4
+PASS  go vet ./...
+PASS  go test ./...
+PASS  CGO_ENABLED=0 go build
+PASS  前端构建（含 vue-tsc）
+PASS  AD-4 ECDICT 命中 recall（音标/词性/释义/标签）
+PASS  AD-4 感知 <100ms 量级（服务端 30ms，含 HTTP）
+PASS  AD-7 recalled 还原为 recall
+PASS  AD-4 生僻词转模型解释（source=model，带例句）
+PASS  AD-9 查词不计翻译配额
+PASS  AD-9 模型兜底超限返回 429
+PASS  FR-505 站点级覆盖用户级；返回指纹
+FAIL  Playwright P4
+PASS  go vet ./...
+PASS  go test ./...
+PASS  CGO_ENABLED=0 go build
+PASS  前端构建（含 vue-tsc）
+PASS  AD-4 ECDICT 命中 recall（音标/词性/释义/标签）
+PASS  AD-4 感知 <100ms 量级（服务端 30ms，含 HTTP）
+PASS  AD-7 recalled 还原为 recall
+PASS  AD-4 生僻词转模型解释（source=model，带例句）
+PASS  AD-9 查词不计翻译配额
+PASS  AD-9 模型兜底超限返回 429
+PASS  FR-505 站点级覆盖用户级；返回指纹
+FAIL  Playwright P4
+PASS  go vet ./...
+PASS  go test ./...
+PASS  CGO_ENABLED=0 go build
+PASS  前端构建（含 vue-tsc）
+PASS  AD-4 ECDICT 命中 recall（音标/词性/释义/标签）
+PASS  AD-4 感知 <100ms 量级（服务端 32ms，含 HTTP）
+PASS  AD-7 recalled 还原为 recall
+PASS  AD-4 生僻词转模型解释（source=model，带例句）
+PASS  AD-9 查词不计翻译配额
+PASS  AD-9 模型兜底超限返回 429
+PASS  FR-505 站点级覆盖用户级；返回指纹
+FAIL  Playwright P4
+PASS  go vet ./...
+PASS  go test ./...
+PASS  CGO_ENABLED=0 go build
+PASS  前端构建（含 vue-tsc）
+PASS  AD-4 ECDICT 命中 recall（音标/词性/释义/标签）
+PASS  AD-4 感知 <100ms 量级（服务端 35ms，含 HTTP）
+PASS  AD-7 recalled 还原为 recall
+PASS  AD-4 生僻词转模型解释（source=model，带例句）
+PASS  AD-9 查词不计翻译配额
+PASS  AD-9 模型兜底超限返回 429
+PASS  FR-505 站点级覆盖用户级；返回指纹
+FAIL  Playwright P4
+PASS  go vet ./...
+PASS  go test ./...
+PASS  CGO_ENABLED=0 go build
+PASS  前端构建（含 vue-tsc）
+PASS  AD-4 ECDICT 命中 recall（音标/词性/释义/标签）
+PASS  AD-4 感知 <100ms 量级（服务端 30ms，含 HTTP）
+PASS  AD-7 recalled 还原为 recall
+PASS  AD-4 生僻词转模型解释（source=model，带例句）
+PASS  AD-9 查词不计翻译配额
+PASS  AD-9 模型兜底超限返回 429
+PASS  FR-505 站点级覆盖用户级；返回指纹
+PASS  Playwright P4（弹卡触发/内容/收藏/模式/朗读 + 术语闭环）

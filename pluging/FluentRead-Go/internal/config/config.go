@@ -44,6 +44,8 @@ type Config struct {
 	SiteDailyPaidChars int
 	// RatePerMinute 是访客每分钟桶；IP 桶为 4×（FR-602）。
 	RatePerMinute int
+	// DictRatePerMinute 是词典模型兜底的每分钟限频（§八 8.5，默认 10）。
+	DictRatePerMinute int
 	// CacheEnabled 是服务端翻译缓存开关（FR-1101）。
 	CacheEnabled bool
 	// SDKOrigins 是 SDK 域名白名单，逗号分隔；空 = SDK 关闭（FR-906 安全默认）。
@@ -81,6 +83,9 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 	if cfg.RatePerMinute, err = envInt("FR_RATE_PER_MINUTE", 20); err != nil {
+		return nil, err
+	}
+	if cfg.DictRatePerMinute, err = envInt("FR_DICT_RATE_PER_MINUTE", 10); err != nil {
 		return nil, err
 	}
 	if cfg.CacheEnabled, err = envBool("FR_CACHE_ENABLED", true); err != nil {

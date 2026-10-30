@@ -467,10 +467,14 @@ func dictFake(word string) string {
 		IsTypo     bool   `json:"isTypo"`
 		CorrectTo  string `json:"correctTo,omitempty"`
 	}
-	d := def{Pos: "v. n.", Definition: "回忆起；召回；记忆力（模拟在线解释）", Example: "She tried to recall the exact wording of the note."}
-	// 拼写错误演示：gerrymander 类生僻词与常见错拼都走"可能是 XXX"提示。
-	if strings.HasSuffix(w, "ing") && len(w) > 5 {
-		d.CorrectTo = strings.TrimSuffix(w, "ing")
+	d := def{Pos: "v. n.", Definition: "在线解释（模拟）：该词的含义与用法说明。", Example: "This is an example sentence using " + w + "."}
+	// AD-5：常见错拼给"可能是 XXX 的拼写错误"提示。
+	if strings.HasSuffix(w, "ies") {
+		d.IsTypo = true
+		d.CorrectTo = strings.TrimSuffix(w, "ies") + "y"
+	} else if strings.HasSuffix(w, "ieves") {
+		d.IsTypo = true
+		d.CorrectTo = strings.TrimSuffix(w, "ieves") + "eive"
 	}
 	raw, _ := json.Marshal(d)
 	return string(raw)

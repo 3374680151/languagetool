@@ -17,6 +17,7 @@ import (
 	"fluentread/internal/gateway"
 	"fluentread/internal/httpapi/middleware"
 	"fluentread/internal/service"
+	"fluentread/internal/store"
 )
 
 // translateBody 是请求体（§7.4）。
@@ -69,12 +70,26 @@ func (a *App) Translate(c *gin.Context) {
 		}
 	}
 
-	// ③ 编排（校验/配额/并发/降级/计费都在 service）。
+	// ③ 生效术语（站点 > 用户合并）注入请求：术语必须真的进提示词（FR-502），
+	// 并随响应回传指纹，前端凭它判断"译文已过期"（FR-503）。
+	merged, err := a.GlossaryRepo.Merged(middleware.VisitorID(c))
+	if err != nil {
+		Fail(c, errs.Internal(err))
+		return
+	}
+	glossary := make([][2]string, 0, len(merged))
+	for _, g := range merged {
+		glossary = append(glossary, [2]string{g.SourceTerm, g.TargetTerm})
+	}
+	req.Glossary = glossary
+
+	// ④ 编排（校验/配额/并发/降级/计费都在 service）。
 	// Validate 类错误与配额错误都是 errs 语义，Fail 统一渲染。
 	resp, err := a.Translator.Translate(c.Request.Context(), middleware.VisitorID(c), req)
 	if err != nil {
 		Fail(c, err)
 		return
 	}
+	resp.GlossaryFingerprint = store.Fingerprint(merged)
 	OK(c, resp)
 }

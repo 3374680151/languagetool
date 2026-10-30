@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"fluentread/internal/config"
+	"fluentread/internal/dict"
 	"fluentread/internal/gateway"
 	"fluentread/internal/httpapi"
 	"fluentread/internal/httpapi/handler"
@@ -127,6 +128,15 @@ func main() {
 		}
 	}()
 
+	// Step 3.6: ECDICT 精简词典（P4，DR-6）。加载失败不阻断启动（查词退化为模型兜底）。
+	dictionary, err := dict.Load()
+	if err != nil {
+		slog.Warn("词典加载失败，查词将直接走模型兜底", "err", err)
+		dictionary = nil
+	} else {
+		slog.Info("词典已就绪", "entries", "3000", "source", "ECDICT 精简库")
+	}
+
 	// Step 4: 服务层与 HTTP 层。
 	translator := service.NewTranslator(pool, store.NewUsageRepo(db), cfg)
 	proofreader := service.NewProofreader(pool, store.NewUsageRepo(db), cfg)
@@ -138,7 +148,7 @@ func main() {
 		assets = nil
 	}
 
-	app := handler.NewApp(cfg, catalog, db, pool, translator, proofreader, assets)
+	app := handler.NewApp(cfg, catalog, db, pool, translator, proofreader, dictionary, assets)
 	router := httpapi.NewRouter(app)
 
 	srv := &http.Server{

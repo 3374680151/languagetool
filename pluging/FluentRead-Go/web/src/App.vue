@@ -10,6 +10,7 @@ import { onMounted } from 'vue';
 import { RouterView } from 'vue-router';
 import TopBar from './components/TopBar.vue';
 import ToastHost from './components/ToastHost.vue';
+import WordPopup from './components/WordPopup.vue';
 import ConfirmDialog from './components/ConfirmDialog.vue';
 import { useSettingsStore } from './stores/settings';
 import { useConfigStore } from './stores/config';
@@ -29,6 +30,7 @@ onMounted(() => {
     <TopBar />
     <RouterView />
     <ToastHost />
+    <WordPopup />
     <ConfirmDialog />
   </div>
 </template>

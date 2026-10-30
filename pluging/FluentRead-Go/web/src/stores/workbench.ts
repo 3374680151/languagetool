@@ -68,8 +68,10 @@ export const useWorkbenchStore = defineStore('workbench', {
     unconfigured: false,
     /** customFailedSeen 本次翻译中出现过"自定义模型失败已回落"（FR-405 提示用）。 */
     customFailedSeen: false,
-    /** glossaryFingerprint 是上次全译成功时的术语指纹（FR-503，P4 接入）。 */
+    /** glossaryFingerprint 是上次全译成功时的术语指纹（FR-503）。 */
     glossaryFingerprint: '',
+    /** glossaryApplied 记录本次翻译的术语命中（展示用）。 */
+    glossaryFingerprintSeen: false,
     /** pendingFocus 拆段后组件应聚焦的段与光标位（Enter×2 流畅开新段）。 */
     pendingFocus: null as { id: number; offset: number } | null,
     _saveTimer: 0 as unknown as ReturnType<typeof setTimeout> | 0,
@@ -325,7 +327,9 @@ export const useWorkbenchStore = defineStore('workbench', {
             from: settings.prefs.langPair.from,
             to: settings.prefs.langPair.to,
             style: settings.prefs.style,
-            model: settings.prefs.model === 'custom' ? undefined : settings.prefs.model || undefined,
+            model: settings.prefs.model === 'custom' || settings.prefs.model === 'default'
+              ? undefined
+              : settings.prefs.model || undefined,
             custom: useCustom
               ? {
                   baseURL: settings.customModel.baseURL,
@@ -342,6 +346,10 @@ export const useWorkbenchStore = defineStore('workbench', {
         }
         if (resp.degradedReason) {
           this.degradedReason = resp.degradedReason;
+        }
+        if (resp.glossaryFingerprint) {
+          this.glossaryFingerprint = resp.glossaryFingerprint;
+          this.glossaryFingerprintSeen = true;
         }
       } catch (e) {
         this.applyBatchError(batch, e);

@@ -135,6 +135,8 @@ type TranslateResponse struct {
 	Degraded       bool   `json:"degraded,omitempty"`
 	DegradedReason string `json:"degradedReason,omitempty"`
 	Model          string `json:"model,omitempty"`
+	// GlossaryFingerprint 是本次翻译实际使用的术语指纹（FR-503 过期判定）。
+	GlossaryFingerprint string `json:"glossaryFingerprint,omitempty"`
 }
 
 // Translate 执行整批翻译。调用前配额预扣已由本方法完成；

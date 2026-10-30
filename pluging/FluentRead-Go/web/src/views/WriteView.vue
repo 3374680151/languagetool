@@ -12,10 +12,12 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { ArrowRight, Switch } from '@element-plus/icons-vue';
 import SplitPane from '../components/SplitPane.vue';
 import ProofreadPanel from '../components/ProofreadPanel.vue';
+import GlossaryDialog from '../components/GlossaryDialog.vue';
 import { useWorkbenchStore } from '../stores/workbench';
 import { useSettingsStore } from '../stores/settings';
 import { useQuotaStore } from '../stores/quota';
 import { useConfigStore } from '../stores/config';
+import { useGlossaryStore } from '../stores/glossary';
 import { useUiStore } from '../stores/ui';
 import { postProofread } from '../api/client';
 import type { Suggestion } from '../api/types';
@@ -26,6 +28,7 @@ const doc = useWorkbenchStore();
 const settings = useSettingsStore();
 const quota = useQuotaStore();
 const config = useConfigStore();
+const glossary = useGlossaryStore();
 const ui = useUiStore();
 
 // 纠错面板状态（FR-2xx，P3）。
@@ -88,6 +91,13 @@ function ignoreSuggestion(index: number) {
 }
 
 const activeSegId = ref<number | null>(null);
+
+const glossaryOpen = ref(false);
+
+/** glossaryStale 术语改过而译文还是旧的（FR-503）。 */
+const glossaryStale = computed(() =>
+  glossary.loaded && doc.glossaryFingerprintSeen && doc.hasTranslated && glossary.fingerprint !== doc.glossaryFingerprint,
+);
 
 /** defaultModelLabel 顶栏下拉里"默认模型"的显示名（FR-401）。 */
 const defaultModelLabel = computed(() => {
@@ -200,6 +210,7 @@ function onKeydown(e: KeyboardEvent) {
 
 onMounted(() => {
   document.documentElement.classList.toggle('dark', settings.theme === 'dark');
+  void glossary.refresh();
   if (!doc.restoreDraft()) {
     doc.clearAll();
   }
@@ -271,14 +282,14 @@ function setActive(id: number) {
 
       <!-- 模型下拉（FR-402/408）：巡检剔除后的站点池 + 自定义入口 -->
       <el-select
-        :model-value="settings.prefs.model"
+        :model-value="settings.prefs.model || 'default'"
         size="small"
         class="toolbar__model"
         data-test="model-select"
         aria-label="模型"
         @update:model-value="(v: string) => settings.patch({ model: v })"
       >
-        <el-option value="" :label="defaultModelLabel" />
+        <el-option value="default" :label="defaultModelLabel" />
         <el-option
           v-for="m in config.models"
           :key="m.id"
@@ -306,6 +317,8 @@ function setActive(id: number) {
           </el-dropdown-menu>
         </template>
       </el-dropdown>
+
+      <el-button size="small" data-test="glossary-btn" @click="glossaryOpen = true">术语</el-button>
 
       <span class="toolbar__stats faint" data-test="stats">
         {{ doc.stats.done }}/{{ doc.stats.total }} 段已译<template v-if="doc.stats.failed"> · {{ doc.stats.failed }} 段失败</template><template v-if="doc.stats.edited"> · {{ doc.stats.edited }} 段手改</template>
@@ -340,6 +353,22 @@ function setActive(id: number) {
       title="部分内容由免费方式完成（模型暂时不可用）"
       description="译文仍然可用，但质量可能略有下降。"
     />
+    <el-alert
+      v-if="glossaryStale"
+      type="warning"
+      :closable="false"
+      show-icon
+      data-test="banner-glossary-stale"
+      title="术语表改过了，当前译文还是旧的"
+    >
+      <template #default>
+        <div class="timeout-row">
+          <span>重新翻译后，指定译法才会生效。</span>
+          <el-button size="small" type="primary" data-test="glossary-retranslate" @click="onTranslateAll(true)">全部重译</el-button>
+        </div>
+      </template>
+    </el-alert>
+
     <el-alert
       v-if="doc.translating && doc.waitedSeconds >= 8"
       type="info"
@@ -389,6 +418,9 @@ function setActive(id: number) {
       @ignore="ignoreSuggestion"
       @retry="runProofread"
     />
+
+    <!-- 术语管理弹窗（P4） -->
+    <GlossaryDialog :open="glossaryOpen" @close="glossaryOpen = false" />
   </main>
 </template>
 
