@@ -24,6 +24,11 @@ async function clearDraft(page: Page) {
 }
 
 async function pasteDoc(page: Page, text: string) {
+  // 空态卡片盖住输入区：先点"开始写"。
+  const empty = page.getByTestId('empty-state');
+  if (await empty.isVisible().catch(() => false)) {
+    await page.getByTestId('start-write').click();
+  }
   const first = page.locator('.split__cell--src .split__input').first();
   await first.click();
   await first.fill('');

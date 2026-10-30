@@ -1,6 +1,7 @@
 ?   	fluentread/cmd/mockupstream	[no test files]
 ?   	fluentread/cmd/server	[no test files]
 ok  	fluentread/internal/config	(cached)
+?   	fluentread/internal/dict	[no test files]
 ok  	fluentread/internal/errs	(cached)
 ok  	fluentread/internal/gateway	(cached)
 ?   	fluentread/internal/httpapi	[no test files]

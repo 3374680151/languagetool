@@ -22,3 +22,11 @@ PASS  FR-1201 收藏幂等（created=true 后 false，同一 id）
 PASS  FR-1202 recall 与 recalled 均命中 → 用过 1 次（每请求一次）
 PASS  FR-703 另一访客词表为空（匿名隔离）
 PASS  Playwright P5（收藏带原句/幂等/再用+1/排序/访客隔离/删除/搜索弹卡）
+PASS  go vet ./...
+PASS  go test ./...
+PASS  CGO_ENABLED=0 go build
+PASS  前端构建（含 vue-tsc）
+PASS  FR-1201 收藏幂等（created=true 后 false，同一 id）
+PASS  FR-1202 recall 与 recalled 均命中 → 用过 1 次（每请求一次）
+PASS  FR-703 另一访客词表为空（匿名隔离）
+PASS  Playwright P5（收藏带原句/幂等/再用+1/排序/访客隔离/删除/搜索弹卡）

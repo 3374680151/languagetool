@@ -1,4 +1,4 @@
-{"time":"2026-10-31T04:54:49.847783+08:00","level":"WARN","msg":"配置提醒","detail":"未配置 FR_BASE_URL / FR_API_KEY：模型翻译与纠错不可用，站点处于未配置态"}
-{"time":"2026-10-31T04:54:49.84791+08:00","level":"WARN","msg":"配置提醒","detail":"未设置 FR_MODEL：将取模型清单 role=primary 且 enabled 的第一项"}
-{"time":"2026-10-31T04:54:49.847916+08:00","level":"WARN","msg":"配置提醒","detail":"未设置 FR_SDK_ORIGINS：SDK 处于关闭状态"}
-{"time":"2026-10-31T04:54:49.85177+08:00","level":"ERROR","msg":"模型清单加载失败，已退出","err":"模型 \"my-custom\" 是占位模板，启用前必须填真实模型名（FR-409）"}
+{"time":"2026-10-31T07:05:40.074565+08:00","level":"WARN","msg":"配置提醒","detail":"未配置 FR_BASE_URL / FR_API_KEY：模型翻译与纠错不可用，站点处于未配置态"}
+{"time":"2026-10-31T07:05:40.074673+08:00","level":"WARN","msg":"配置提醒","detail":"未设置 FR_MODEL：将取模型清单 role=primary 且 enabled 的第一项"}
+{"time":"2026-10-31T07:05:40.074679+08:00","level":"WARN","msg":"配置提醒","detail":"未设置 FR_SDK_ORIGINS：SDK 处于关闭状态"}
+{"time":"2026-10-31T07:05:40.078652+08:00","level":"ERROR","msg":"模型清单加载失败，已退出","err":"模型 \"my-custom\" 是占位模板，启用前必须填真实模型名（FR-409）"}

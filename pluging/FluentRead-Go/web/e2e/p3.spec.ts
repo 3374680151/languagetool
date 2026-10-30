@@ -79,6 +79,11 @@ test.describe('P3 纠错', () => {
     await expect(page.locator('.split__cell--src .split__input').first()).toHaveValue(/from an RAG/);
 
     await page.locator('[data-test="suggestion-0"] button', { hasText: '接受' }).click();
+    // 接受处理是异步的（含错误本写入）：用带重试的断言等最终原文。
+    await expect(page.locator('.split__cell--src .split__input').first()).toHaveValue(
+      'The system receives data from an RAG pipeline to draw a conclusion.',
+      { timeout: 10_000 },
+    );
     const final = await page.locator('.split__cell--src .split__input').first().inputValue();
     expect(final).toBe('The system receives data from an RAG pipeline to draw a conclusion.');
     // 面板里没有遗留建议。

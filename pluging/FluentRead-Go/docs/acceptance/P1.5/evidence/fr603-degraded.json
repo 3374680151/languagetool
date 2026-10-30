@@ -1,1 +1,1 @@
-{"ok":true,"data":{"segments":[{"status":"ok","text":"[free] Free line output, good enough to read but not to publish.","degraded":true}],"degraded":true,"degradedReason":"site_paid_cap"}}
+{"ok":true,"data":{"segments":[{"status":"ok","text":"[免费] 免费方式的结果能读，但不够发表。","degraded":true}],"degraded":true,"degradedReason":"site_paid_cap","glossaryFingerprint":"e3b0c44298fc1c14"}}

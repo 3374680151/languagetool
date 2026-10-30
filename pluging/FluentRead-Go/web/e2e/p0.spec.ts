@@ -12,14 +12,14 @@ import { expect, test } from '@playwright/test';
 
 test.describe('P0 骨架', () => {
   test('四个页面都能打开且不白屏', async ({ page }) => {
-    for (const [path, heading] of [
-      ['/', '写作台'],
-      ['/words', '词表'],
-      ['/review', '复习'],
-      ['/settings', '设置'],
+    for (const [path, probe] of [
+      ['/', '.toolbar'],           // 写作台：工具栏（含翻译按钮）
+      ['/words', '[data-test="words-sort"]'],   // 词表页：排序控件
+      ['/review', 'h1:has-text("复习")'],
+      ['/settings', 'h1:has-text("偏好")'],
     ] as const) {
       await page.goto(path);
-      await expect(page.getByRole('heading', { name: heading })).toBeVisible();
+      await expect(page.locator(probe).first()).toBeVisible();
       // 不白屏：页面上始终有顶栏。
       await expect(page.locator('.topbar')).toBeVisible();
     }
@@ -65,6 +65,7 @@ test.describe('P0 骨架', () => {
 
   test('未知前端路由回落写作台', async ({ page }) => {
     await page.goto('/no/such/page');
-    await expect(page.getByRole('heading', { name: '写作台' })).toBeVisible();
+    // 回落到写作台：工具栏可见。
+    await expect(page.locator('.toolbar')).toBeVisible();
   });
 });

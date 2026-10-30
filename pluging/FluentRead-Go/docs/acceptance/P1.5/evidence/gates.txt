@@ -73,3 +73,17 @@ PASS  FR-605 文案含恢复时间且无内部词
 PASS  FR-602 放行数=5 ，被拒的 7 次全部没打上游
 PASS  FR-606 额度充足时无提示
 PASS  FR-606 额度快用完时出现提示
+PASS  go vet ./...
+PASS  go test ./...
+PASS  CGO_ENABLED=0 go build
+PASS  前端构建（含 vue-tsc）
+PASS  FR-604 空白段不计费（used=2）
+PASS  FR-603/306 触顶降级 degraded:true，译文可用
+PASS  FR-603/604 触顶后付费线路 0 次调用，免费线路接管
+PASS  FR-601 配额用尽返回 429
+PASS  FR-601 重启后配额不归零
+PASS  FR-605 Retry-After 头存在
+PASS  FR-605 文案含恢复时间且无内部词
+PASS  FR-602 放行数=5 ，被拒的 7 次全部没打上游
+PASS  FR-606 额度充足时无提示
+PASS  FR-606 额度快用完时出现提示

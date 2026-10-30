@@ -1,11 +1,11 @@
 
 Running 6 tests using 1 worker
 
-  ✓  1 e2e/p0.spec.ts:14:3 › P0 骨架 › 四个页面都能打开且不白屏 (650ms)
-  ✓  2 e2e/p0.spec.ts:28:3 › P0 骨架 › 访客 cookie 已下发（FR-1104） (175ms)
-  ✓  3 e2e/p0.spec.ts:37:3 › P0 骨架 › 深浅色切换且刷新保留（FR-1001 主题位） (351ms)
-  ✓  4 e2e/p0.spec.ts:49:3 › P0 骨架 › 未实现的接口返回统一响应包 404（NFR-12） (24ms)
-  ✓  5 e2e/p0.spec.ts:58:3 › P0 骨架 › health 三态可通过页面网络访问验证（FR-1003） (5ms)
-  ✓  6 e2e/p0.spec.ts:66:3 › P0 骨架 › 未知前端路由回落写作台 (190ms)
+  ✓  1 e2e/p0.spec.ts:14:3 › P0 骨架 › 四个页面都能打开且不白屏 (711ms)
+  ✓  2 e2e/p0.spec.ts:28:3 › P0 骨架 › 访客 cookie 已下发（FR-1104） (207ms)
+  ✓  3 e2e/p0.spec.ts:37:3 › P0 骨架 › 深浅色切换且刷新保留（FR-1001 主题位） (410ms)
+  ✓  4 e2e/p0.spec.ts:49:3 › P0 骨架 › 未实现的接口返回统一响应包 404（NFR-12） (21ms)
+  ✓  5 e2e/p0.spec.ts:58:3 › P0 骨架 › health 三态可通过页面网络访问验证（FR-1003） (4ms)
+  ✓  6 e2e/p0.spec.ts:66:3 › P0 骨架 › 未知前端路由回落写作台 (223ms)
 
-  6 passed (2.0s)
+  6 passed (2.3s)

@@ -85,3 +85,14 @@ PASS  FR-906 白名单为空 = SDK 关闭
 PASS  FR-903 SDK 与主站同一配额（SDK 调用计入了访客用量）
 PASS  SDK 脚本下发（带缓存头）
 PASS  Playwright P6（悬浮球/面板/划词气泡/词卡收藏/样式隔离/白名单）
+PASS  go vet ./...
+PASS  go test ./...
+PASS  CGO_ENABLED=0 go build
+PASS  前端构建（含 vue-tsc）
+PASS  FR-905 SDK ≤30KB gzip（实测 5309B）
+PASS  FR-906 白名单内来源可用
+PASS  FR-906 白名单外 403 + 可读提示
+PASS  FR-906 白名单为空 = SDK 关闭
+PASS  FR-903 SDK 与主站同一配额（SDK 调用计入了访客用量）
+PASS  SDK 脚本下发（带缓存头）
+PASS  Playwright P6（悬浮球/面板/划词气泡/词卡收藏/样式隔离/白名单）

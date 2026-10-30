@@ -1,6 +1,6 @@
 
 Running 1 test using 1 worker
 
-  ✓  1 e2e/p2-states.spec.ts:29:1 › unconfigured (469ms)
+  ✓  1 e2e/p2-states.spec.ts:29:1 › unconfigured (472ms)
 
-  1 passed (876ms)
+  1 passed (882ms)
