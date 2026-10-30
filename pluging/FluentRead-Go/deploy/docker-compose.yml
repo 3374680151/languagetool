@@ -1,36 +1,50 @@
-# FluentRead-Go 本地与生产共用编排。
-# 用法：
-#   cp .env.example .env      # 填模型 key
-#   docker compose -f deploy/docker-compose.yml up -d
+# FluentRead-Go 本地与生产共用编排（P7）。
 #
-# 说明：web 通过服务名 litellm 访问网关，不经过宿主机端口。
+# @file deploy/docker-compose.yml
+# 文件职责：
+#   - 默认 profile：只起 app——单容器独立运行（NFR-4），FR_BASE_URL 直指任意
+#     OpenAI 兼容端点（DR-9：LiteLLM 可选外挂，不部署时行为完全一致）。
+#   - litellm profile：`docker compose --profile litellm up -d` 一键加网关，
+#     app 经服务名 litellm 访问，站长有什么模型就配什么（FR-407 的落地方式）。
+#
+# 用法：
+#   cp .env.example .env      # 填模型端点与密钥
+#   docker compose -f deploy/docker-compose.yml up -d                # 单容器
+#   docker compose -f deploy/docker-compose.yml --profile litellm up -d   # 加网关
 
 services:
-  web:
+  app:
     build:
       context: ..
       dockerfile: deploy/Dockerfile
+      args:
+        NODE_IMAGE: ${NODE_IMAGE:-node:22-alpine}
+        GO_IMAGE: ${GO_IMAGE:-golang:1.25-alpine}
     environment:
-      FR_ADDR: ":8080"
+      FR_LISTEN: ":8787"
       FR_DB_PATH: /app/data/fluentread.db
-      # 容器内互访用服务名，覆盖 .env 里的 127.0.0.1
-      FR_GATEWAY_BASE: http://litellm:4000
-      FR_GATEWAY_KEY: ${LITELLM_MASTER_KEY}
-      FR_DEFAULT_MODEL: ${FR_DEFAULT_MODEL:-deepseek-chat}
-      FR_QUOTA_DAILY: ${FR_QUOTA_DAILY:-200}
-      FR_RATE_LIMIT: ${FR_RATE_LIMIT:-30}
-      FR_UPSTREAM_DAILY_CAP: ${FR_UPSTREAM_DAILY_CAP:-200000}
-      FR_ALLOW_ORIGINS: ${FR_ALLOW_ORIGINS:-}
-      FR_ADMIN_PASSWORD: ${FR_ADMIN_PASSWORD:-}
+      # L1 默认线路（OpenAI 兼容）：默认指向同编排里的 LiteLLM（profile 启用）；
+      # 不启用 litellm profile 时，请在 .env 里把 FR_BASE_URL 改成你的端点。
+      FR_BASE_URL: ${FR_BASE_URL:-http://litellm:4000}
+      FR_API_KEY: ${FR_API_KEY:-${LITELLM_MASTER_KEY}}
+      FR_MODEL: ${FR_MODEL:-deepseek-chat}
+      # 免费降级后备（DR-10）：默认启用 MyMemory 官方端点，置空 FR_FALLBACK_TYPE 可关闭
+      FR_FALLBACK_TYPE: ${FR_FALLBACK_TYPE:-mymemory}
+      FR_UPSTREAM_TIMEOUT_SECONDS: ${FR_UPSTREAM_TIMEOUT_SECONDS:-30}
+      FR_VISITOR_DAILY_SEGMENTS: ${FR_VISITOR_DAILY_SEGMENTS:-200}
+      FR_SITE_DAILY_PAID_CHARS: ${FR_SITE_DAILY_PAID_CHARS:-200000}
+      FR_RATE_PER_MINUTE: ${FR_RATE_PER_MINUTE:-20}
+      FR_CACHE_ENABLED: ${FR_CACHE_ENABLED:-true}
+      FR_SDK_ORIGINS: ${FR_SDK_ORIGINS:-}
+      FR_MODELS_FILE: /app/deploy/models.json
     ports:
-      - "8080:8080"
+      - "${FR_PORT:-8787}:8787"
     volumes:
       - ../data:/app/data
-    depends_on:
-      - litellm
+      - ./models.json:/app/deploy/models.json:ro
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/api/health"]
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8787/api/health"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -38,6 +52,7 @@ services:
 
   litellm:
     image: ghcr.io/berriai/litellm:main-stable
+    profiles: ["litellm"]
     command: ["--config", "/app/config.yaml", "--port", "4000"]
     environment:
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY}
@@ -53,7 +68,7 @@ services:
     volumes:
       - ./litellm.config.yaml:/app/config.yaml:ro
       - ../data:/data
-    # 不对外暴露端口：只有 web 容器需要访问它
+    # 不对外暴露端口：只有 app 容器需要访问它
     expose:
       - "4000"
     restart: unless-stopped

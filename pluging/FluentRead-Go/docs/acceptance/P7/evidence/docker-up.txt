@@ -1,0 +1,52 @@
+time="2026-10-31T06:46:53+08:00" level=warning msg="The \"LITELLM_MASTER_KEY\" variable is not set. Defaulting to a blank string."
+ Image deploy-app Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 671B done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile
+#2 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile: 1.92kB done
+#2 DONE 0.0s
+
+#3 [internal] load metadata for docker.io/library/golang:1.25-alpine
+#3 ...
+
+#4 [internal] load metadata for docker.io/library/alpine:3.20
+#4 ...
+
+#5 [internal] load metadata for docker.io/library/node:22-alpine
+#5 ERROR: DeadlineExceeded: context deadline exceeded
+
+#3 [internal] load metadata for docker.io/library/golang:1.25-alpine
+#3 CANCELED
+
+#4 [internal] load metadata for docker.io/library/alpine:3.20
+#4 CANCELED
+------
+ > [internal] load metadata for docker.io/library/node:22-alpine:
+------
+Dockerfile:18
+
+--------------------
+
+  16 |     
+
+  17 |     # ---------- 阶段 1：前端 ----------
+
+  18 | >>> FROM ${NODE_IMAGE} AS web
+
+  19 |     WORKDIR /web
+
+  20 |     COPY web/package.json web/package-lock.json ./
+
+--------------------
+
+failed to solve: DeadlineExceeded: context deadline exceeded
+
+
+
+View build details: docker-desktop://dashboard/build/default/default/miuvuea3re0yhty7i8qicrova
+

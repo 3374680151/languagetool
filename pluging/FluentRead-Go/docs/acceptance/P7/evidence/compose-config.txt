@@ -1,0 +1,55 @@
+time="2026-10-31T06:49:33+08:00" level=warning msg="The \"LITELLM_MASTER_KEY\" variable is not set. Defaulting to a blank string."
+name: deploy
+services:
+  app:
+    build:
+      context: /Users/openpie/Desktop/worker/notebook/pluging/FluentRead-Go
+      dockerfile: deploy/Dockerfile
+      args:
+        GO_IMAGE: golang:1.25-alpine
+        NODE_IMAGE: node:22-alpine
+    environment:
+      FR_API_KEY: testkey
+      FR_BASE_URL: http://host.docker.internal:18701
+      FR_CACHE_ENABLED: "true"
+      FR_DB_PATH: /app/data/fluentread.db
+      FR_FALLBACK_TYPE: mymemory
+      FR_LISTEN: :8787
+      FR_MODEL: deepseek-chat
+      FR_MODELS_FILE: /app/deploy/models.json
+      FR_RATE_PER_MINUTE: "20"
+      FR_SDK_ORIGINS: ""
+      FR_SITE_DAILY_PAID_CHARS: "200000"
+      FR_UPSTREAM_TIMEOUT_SECONDS: "30"
+      FR_VISITOR_DAILY_SEGMENTS: "200"
+    healthcheck:
+      test:
+        - CMD
+        - wget
+        - -qO-
+        - http://127.0.0.1:8787/api/health
+      timeout: 5s
+      interval: 30s
+      retries: 3
+      start_period: 10s
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        target: 8787
+        published: "8787"
+        protocol: tcp
+    restart: unless-stopped
+    volumes:
+      - type: bind
+        source: /Users/openpie/Desktop/worker/notebook/pluging/FluentRead-Go/data
+        target: /app/data
+        bind: {}
+      - type: bind
+        source: /Users/openpie/Desktop/worker/notebook/pluging/FluentRead-Go/deploy/models.json
+        target: /app/deploy/models.json
+        read_only: true
+        bind: {}
+networks:
+  default:
+    name: deploy_default

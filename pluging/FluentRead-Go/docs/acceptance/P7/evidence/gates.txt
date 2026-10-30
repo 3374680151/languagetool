@@ -1,0 +1,28 @@
+PASS  go vet ./...
+PASS  go test ./...
+PASS  CGO_ENABLED=0 go build
+PASS  前端构建（含 vue-tsc）
+PASS  docker compose 配置有效（含 litellm profile 定义）
+FAIL  镜像构建失败
+FAIL  容器启动失败
+FAIL  容器未运行
+FAIL  本地 health: 
+FAIL  翻译冒烟: 
+PASS  go vet ./...
+PASS  go test ./...
+PASS  CGO_ENABLED=0 go build
+PASS  前端构建（含 vue-tsc）
+PASS  docker compose 配置有效（含 litellm profile 定义）
+FAIL  镜像构建失败（直连与镜像源均不可达）
+FAIL  容器启动失败
+FAIL  容器未运行
+PASS  本地一条命令起完整站点，health 全 ok
+PASS  端到端翻译冒烟通过（部署形态）
+PASS  go vet ./...
+PASS  go test ./...
+PASS  CGO_ENABLED=0 go build
+PASS  前端构建（含 vue-tsc）
+PASS  docker compose 配置有效（含 litellm profile 定义）
+SKIPPED docker build（registry 不可达：直连与镜像源均超时，见 docker-build.txt）
+PASS  本地一条命令起完整站点，health 全 ok
+PASS  端到端翻译冒烟通过（部署形态）
