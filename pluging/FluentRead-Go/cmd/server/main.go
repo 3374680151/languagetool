@@ -93,6 +93,7 @@ func main() {
 
 	// Step 4: 服务层与 HTTP 层。
 	translator := service.NewTranslator(pool, store.NewUsageRepo(db), cfg)
+	proofreader := service.NewProofreader(pool, store.NewUsageRepo(db), cfg)
 
 	assets, err := web.FS()
 	if err != nil {
@@ -101,7 +102,7 @@ func main() {
 		assets = nil
 	}
 
-	app := handler.NewApp(cfg, catalog, db, pool, translator, assets)
+	app := handler.NewApp(cfg, catalog, db, pool, translator, proofreader, assets)
 	router := httpapi.NewRouter(app)
 
 	srv := &http.Server{

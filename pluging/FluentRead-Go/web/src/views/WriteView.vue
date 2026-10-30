@@ -11,11 +11,14 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 import { ArrowRight, Switch } from '@element-plus/icons-vue';
 import SplitPane from '../components/SplitPane.vue';
+import ProofreadPanel from '../components/ProofreadPanel.vue';
 import { useWorkbenchStore } from '../stores/workbench';
 import { useSettingsStore } from '../stores/settings';
 import { useQuotaStore } from '../stores/quota';
 import { useConfigStore } from '../stores/config';
 import { useUiStore } from '../stores/ui';
+import { postProofread } from '../api/client';
+import type { Suggestion } from '../api/types';
 import { Languages } from '../lib/lang';
 import { buildMarkdown, downloadText, exportFileName, type ExportMode } from '../lib/markdown';
 
@@ -24,6 +27,65 @@ const settings = useSettingsStore();
 const quota = useQuotaStore();
 const config = useConfigStore();
 const ui = useUiStore();
+
+// 纠错面板状态（FR-2xx，P3）。
+const proofState = ref({
+  open: false,
+  loading: false,
+  error: '',
+  segmentId: 0,
+  segmentNo: 0,
+  suggestions: [] as Suggestion[],
+  appliedIds: [] as number[],
+});
+
+/** onProofread 打开面板并请求纠错（FR-207：只手动触发）。 */
+async function onProofread(segmentId: number) {
+  const seg = doc.segments.find((s) => s.id === segmentId);
+  if (!seg || !seg.source.trim()) return;
+  const no = doc.segments.indexOf(seg) + 1;
+  proofState.value = {
+    open: true, loading: true, error: '',
+    segmentId, segmentNo: no, suggestions: [], appliedIds: [],
+  };
+  await runProofread();
+}
+
+async function runProofread() {
+  const st = proofState.value;
+  const seg = doc.segments.find((s) => s.id === st.segmentId);
+  if (!seg) return;
+  st.loading = true;
+  st.error = '';
+  try {
+    const resp = await postProofread(seg.source, 'en');
+    st.suggestions = resp.suggestions;
+  } catch (e) {
+    st.error = e instanceof Error ? e.message : '纠错失败，请稍后重试';
+  } finally {
+    st.loading = false;
+  }
+}
+
+/** acceptSuggestion 接受建议：替换原文后重新校验剩余条目位置（FR-205）。 */
+function acceptSuggestion(index: number) {
+  const st = proofState.value;
+  const s = st.suggestions[index];
+  if (!s) return;
+  const updated = doc.applySuggestion(st.segmentId, s.original, s.suggestion);
+  if (updated !== null) {
+    // 重新校验：original 不再是子串的建议（含刚接受的那条）移除（FR-205/204）。
+    st.suggestions = st.suggestions.filter((x) => updated.includes(x.original));
+  }
+  // 列表已重排，禁用标记清零（已接受的建议已随过滤移除）。
+  st.appliedIds = [];
+  ui.toast('success', '已修改原文，记得重新翻译这一段');
+}
+
+/** ignoreSuggestion 忽略建议：移除并重排（FR-205）。 */
+function ignoreSuggestion(index: number) {
+  proofState.value.suggestions.splice(index, 1);
+}
 
 const activeSegId = ref<number | null>(null);
 
@@ -281,7 +343,21 @@ function setActive(id: number) {
     />
 
     <!-- 双栏对照区 -->
-    <SplitPane @load-sample="loadSample" @set-active="setActive" />
+    <SplitPane @load-sample="loadSample" @set-active="setActive" @proofread="onProofread" />
+
+    <!-- 纠错建议面板（P3） -->
+    <ProofreadPanel
+      :open="proofState.open"
+      :loading="proofState.loading"
+      :error="proofState.error"
+      :segment-no="proofState.segmentNo"
+      :suggestions="proofState.suggestions"
+      :applied-ids="proofState.appliedIds"
+      @close="proofState.open = false"
+      @accept="acceptSuggestion"
+      @ignore="ignoreSuggestion"
+      @retry="runProofread"
+    />
   </main>
 </template>
 

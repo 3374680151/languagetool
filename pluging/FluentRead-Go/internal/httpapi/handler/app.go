@@ -44,19 +44,21 @@ type App struct {
 	Pool *gateway.Pool
 	// Translator 是翻译编排。
 	Translator *service.Translator
+	// Proofreader 是纠错编排（P3）。
+	Proofreader *service.Proofreader
 	// Assets 是内嵌的前端产物（web/dist）。为 nil 时返回"前端未构建"说明页。
 	Assets fs.FS
 }
 
 // NewApp 构造依赖容器。
-func NewApp(cfg *config.Config, catalog *config.Catalog, db *gorm.DB, pool *gateway.Pool, translator *service.Translator, assets fs.FS) *App {
+func NewApp(cfg *config.Config, catalog *config.Catalog, db *gorm.DB, pool *gateway.Pool, translator *service.Translator, proofreader *service.Proofreader, assets fs.FS) *App {
 	return &App{
 		Cfg: cfg, Catalog: catalog, DB: db,
 		Usage:       store.NewUsageRepo(db),
 		VisitorRepo: store.NewVisitorRepo(db),
 		PrefsRepo:   store.NewPrefsRepo(db),
 		Limiter:     ratelimit.New(cfg.RatePerMinute),
-		Pool:        pool, Translator: translator, Assets: assets,
+		Pool: pool, Translator: translator, Proofreader: proofreader, Assets: assets,
 	}
 }
 

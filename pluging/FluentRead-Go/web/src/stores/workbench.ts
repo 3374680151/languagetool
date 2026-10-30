@@ -227,6 +227,25 @@ export const useWorkbenchStore = defineStore('workbench', {
       };
     },
 
+    /** applySuggestion 接受一条纠错建议：在源文里替换第一次出现的 original（FR-205）。
+     * 返回更新后的源文（调用方据此重新校验剩余建议的位置）；找不到时不改动。 */
+    applySuggestion(id: number, original: string, suggestion: string): string | null {
+      const seg = this.segments.find((s) => s.id === id);
+      if (!seg || !original) return null;
+      const idx = seg.source.indexOf(original);
+      if (idx < 0) return null;
+      seg.source = seg.source.slice(0, idx) + suggestion + seg.source.slice(idx + original.length);
+      this.scheduleSave();
+      return seg.source;
+    },
+
+    /** isEnglishish 判断段落是否英文（FR-206：中文段没有纠错入口）。 */
+    isEnglishish(id: number): boolean {
+      const seg = this.segments.find((s) => s.id === id);
+      if (!seg) return false;
+      return !/[\u4e00-\u9fff\u3040-\u30ff\uac00-\ud7af]/.test(seg.source);
+    },
+
     // ------------------------------------------------------------------
     // 翻译（FR-106/107/303）
     // ------------------------------------------------------------------

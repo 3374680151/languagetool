@@ -18,7 +18,7 @@ const activeId = ref<number | null>(null);
 /** dismissedEmpty 用户点过"开始写"后不再显示空态卡片（本次会话内）。 */
 const dismissedEmpty = ref(false);
 
-const emit = defineEmits<{ loadSample: []; setActive: [id: number] }>();
+const emit = defineEmits<{ loadSample: []; setActive: [id: number]; proofread: [id: number] }>();
 
 const sourceEls = new Map<number, HTMLTextAreaElement>();
 
@@ -159,6 +159,13 @@ watch(() => doc.segments.length, () => nextTick(growAll));
           />
           <div class="split__src-meta">
             <span class="faint">{{ [...seg.source].length }} 字</span>
+            <button
+              v-if="doc.isEnglishish(seg.id) && seg.source.trim()"
+              class="split__mini"
+              :data-test="`proofread-btn-${i}`"
+              title="检查这一段的拼写与语法"
+              @click="emit('proofread', seg.id)"
+            >纠错</button>
             <button class="split__mini" title="在这段后面插入新段" @click="doc.insertAfter(seg.id)">＋段</button>
             <button class="split__mini split__mini--danger" title="删除这一段" @click="doc.remove(seg.id)">删</button>
           </div>

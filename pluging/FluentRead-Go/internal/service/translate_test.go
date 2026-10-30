@@ -8,6 +8,7 @@
 package service
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -102,3 +103,6 @@ func TestDominantModel(t *testing.T) {
 func errCodeOf(err error) string {
 	return errs.As(err).Code
 }
+
+// testCtx 供 proofread 测试使用的空 context。
+func testCtx() context.Context { return context.Background() }

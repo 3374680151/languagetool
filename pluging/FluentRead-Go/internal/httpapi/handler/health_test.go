@@ -33,7 +33,7 @@ func healthApp(t *testing.T, base string) *App {
 	}
 	cfg := &config.Config{Listen: ":0", DBPath: "x", BaseURL: base, APIKey: "k", UpstreamTimeout: 5 * time.Second}
 	pool := gateway.NewPool(gateway.New(base, []string{"k"}, 5*time.Second), nil, cfg, nil, nil, 5*time.Second)
-	return NewApp(cfg, nil, db, pool, nil, nil)
+	return NewApp(cfg, nil, db, pool, nil, nil, nil)
 }
 
 func callHealth(t *testing.T, app *App) (int, map[string]any) {

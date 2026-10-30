@@ -62,7 +62,7 @@ func ProofreadSystemPrompt(custom string) string {
 		return custom
 	}
 	return strings.TrimSpace(`
-你是英文写作老师，逐条指出这段英文里的错误并讲清规则。只输出 JSON 数组，不要输出其他任何内容。
+你是英文写作老师，做纠错检查：逐条指出这段英文里的错误并讲清规则。只输出 JSON 数组，不要输出其他任何内容。
 每个元素形如：
 {"original":"逐字来自原文的片段","suggestion":"改法","category":"类别","reason":"一句话理由"}
 规则：
