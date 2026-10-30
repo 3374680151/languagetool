@@ -1,0 +1,21 @@
+# 构建上下文排除项。
+# 只影响 docker build，不影响本地开发。
+# 前端产物 web/dist 必须保留（Go 用 go:embed 把它打进二进制），
+# 但 node_modules 绝不能进上下文——那是几百 MB 的噪音。
+
+.git
+.gitignore
+data
+bin
+docs
+marketing
+misc
+examples
+node_modules
+web/node_modules
+web/e2e
+web/test-results
+web/playwright-report
+scripts/fake-gateway
+*.log
+.DS_Store

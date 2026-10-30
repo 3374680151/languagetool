@@ -1,0 +1,24 @@
+# 依赖与构建产物
+/bin/
+/dist/
+/data/
+/web/node_modules/
+# 前端产物由 `make web` 生成；保留 .gitkeep 让 go:embed 在干净检出时也能编译
+/web/dist/*
+!/web/dist/.gitkeep
+/web/test-results/
+/web/playwright-report/
+/sdk/dist/
+
+# 环境与密钥
+.env
+*.env.local
+
+# 编辑器与系统
+.DS_Store
+.idea/
+.vscode/
+
+# 测试与覆盖率
+*.out
+coverage.html

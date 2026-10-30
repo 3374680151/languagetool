@@ -1,0 +1,14 @@
+?   	fluentread/cmd/mockupstream	[no test files]
+?   	fluentread/cmd/server	[no test files]
+ok  	fluentread/internal/config	(cached)
+ok  	fluentread/internal/errs	(cached)
+ok  	fluentread/internal/gateway	(cached)
+?   	fluentread/internal/httpapi	[no test files]
+ok  	fluentread/internal/httpapi/handler	(cached)
+ok  	fluentread/internal/httpapi/middleware	(cached)
+ok  	fluentread/internal/httpx	(cached)
+?   	fluentread/internal/ratelimit	[no test files]
+ok  	fluentread/internal/service	(cached)
+ok  	fluentread/internal/store	(cached)
+?   	fluentread/web	[no test files]
+ok  	fluentread/internal/httpapi/handler	(cached)

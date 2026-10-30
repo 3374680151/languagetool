@@ -1,0 +1,65 @@
+[
+  {
+    "id": "deepseek-chat",
+    "label": "DeepSeek",
+    "role": "primary",
+    "quality": "高",
+    "speed": "快",
+    "cost": "低",
+    "enabled": true
+  },
+  {
+    "id": "qwen-plus",
+    "label": "通义千问",
+    "role": "pool",
+    "quality": "中",
+    "speed": "快",
+    "cost": "低",
+    "enabled": true
+  },
+  {
+    "id": "glm-4",
+    "label": "智谱 GLM-4",
+    "role": "pool",
+    "quality": "中",
+    "speed": "中",
+    "cost": "低",
+    "enabled": false
+  },
+  {
+    "id": "gpt-4o-mini",
+    "label": "GPT-4o mini",
+    "role": "pool",
+    "quality": "高",
+    "speed": "快",
+    "cost": "中",
+    "enabled": false
+  },
+  {
+    "id": "claude-sonnet",
+    "label": "Claude Sonnet",
+    "role": "pool",
+    "quality": "高",
+    "speed": "中",
+    "cost": "高",
+    "enabled": false
+  },
+  {
+    "id": "gemini-flash",
+    "label": "Gemini Flash",
+    "role": "pool",
+    "quality": "高",
+    "speed": "快",
+    "cost": "低",
+    "enabled": false
+  },
+  {
+    "id": "my-custom",
+    "label": "自定义模型",
+    "role": "pool",
+    "quality": "自定义",
+    "speed": "自定义",
+    "cost": "自定义",
+    "enabled": false
+  }
+]

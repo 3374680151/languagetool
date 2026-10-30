@@ -1,0 +1,66 @@
+# LiteLLM 网关配置
+# 加一家模型 = 在这里加一条 model_list，业务代码不用动。
+# 注意：模型密钥缺失只会在调用时报错，不会阻止网关启动。
+# 用不到的模型直接注释掉，避免下拉里出现不可用项。
+
+model_list:
+  # ---------- 国内 ----------
+  - model_name: deepseek-chat
+    litellm_params:
+      model: deepseek/deepseek-chat
+      api_key: os.environ/DEEPSEEK_API_KEY
+
+  - model_name: qwen-plus
+    litellm_params:
+      model: dashscope/qwen-plus
+      api_key: os.environ/DASHSCOPE_API_KEY
+
+  # 智谱没有原生前缀时，用 openai/ + api_base 走兼容模式
+  - model_name: glm-4
+    litellm_params:
+      model: openai/glm-4
+      api_base: https://open.bigmodel.cn/api/paas/v4
+      api_key: os.environ/ZHIPU_API_KEY
+
+  # ---------- 海外 ----------
+  - model_name: gpt-4o-mini
+    litellm_params:
+      model: openai/gpt-4o-mini
+      api_key: os.environ/OPENAI_API_KEY
+
+  - model_name: claude-sonnet
+    litellm_params:
+      model: anthropic/claude-sonnet-4-5
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+  - model_name: gemini-flash
+    litellm_params:
+      model: gemini/gemini-2.5-flash
+      api_key: os.environ/GEMINI_API_KEY
+
+  # ---------- 自定义（万能入口）----------
+  # 任何 OpenAI 兼容端点都能这么接：填 base 与 key，model 名照服务商给的写
+  - model_name: my-custom
+    litellm_params:
+      model: openai/your-model-name
+      api_base: os.environ/CUSTOM_BASE
+      api_key: os.environ/CUSTOM_KEY
+
+router_settings:
+  # 主模型失败自动换下一个，顺序即优先级
+  fallbacks:
+    - deepseek-chat: [qwen-plus, gpt-4o-mini]
+  num_retries: 2
+  timeout: 60
+  # 同一请求尽量落在同一模型上，避免译文风格来回跳
+  routing_strategy: simple-shuffle
+
+litellm_settings:
+  # 不同模型不认的参数自动丢弃，否则换个模型就报"不支持某参数"
+  drop_params: true
+  # 不把提示词与响应写进网关日志
+  turn_off_message_logging: true
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
+  database_url: os.environ/DATABASE_URL

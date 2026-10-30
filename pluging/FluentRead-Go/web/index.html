@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<!--
+  @file web/index.html
+  职责：SPA 的唯一 HTML 入口。只挂一个 #app 与入口脚本，不做任何内联逻辑。
+  边界：主题在 JS 之前先应用到 <html class="dark">，避免深色模式下闪一帧白屏；
+  主题值与 stores/settings.ts 的 localStorage 结构保持一致（fr.prefs.v1）。
+-->
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <title>FluentRead 写作台</title>
+    <script>
+      // 在样式加载前定主题（html.dark），避免深色用户看到一帧白底。
+      try {
+        var prefs = JSON.parse(localStorage.getItem('fr.prefs.v1') || '{}');
+        var theme = prefs.theme === 'dark' ? 'dark'
+          : prefs.theme === 'light' ? 'light'
+          : window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        document.documentElement.classList.toggle('dark', theme === 'dark');
+      } catch (e) {
+        document.documentElement.classList.remove('dark');
+      }
+    </script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

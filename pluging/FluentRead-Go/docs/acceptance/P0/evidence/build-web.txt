@@ -1,0 +1,21 @@
+
+> fluentread-web@0.1.0 build
+> vue-tsc --noEmit && vite build
+
+vite v6.4.5 building for production...
+transforming...
+✓ 1442 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                         1.35 kB │ gzip:   0.86 kB
+dist/assets/style-BiajRlY2.css        342.06 kB │ gzip:  48.15 kB
+dist/assets/ReviewView-Ch9X2SvP.js      0.51 kB │ gzip:   0.45 kB
+dist/assets/WordsView-BWOvIs4z.js       0.58 kB │ gzip:   0.50 kB
+dist/assets/SettingsView-T5sLotqR.js    1.00 kB │ gzip:   0.66 kB
+dist/assets/index-CtVAYGcJ.js         968.94 kB │ gzip: 320.21 kB
+
+(!) Some chunks are larger than 200 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 2.18s

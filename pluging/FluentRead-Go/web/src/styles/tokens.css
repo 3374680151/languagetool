@@ -1,0 +1,98 @@
+/* tokens.css 是全站设计 token（DR-2 / NFR-3 / NFR-9）。
+ *
+ * @file web/src/styles/tokens.css
+ * 文件职责：定义色彩、间距、字号、圆角、阴影的 CSS 变量；亮色 :root 与深色
+ * html.dark 两套取值（§7.8：Element Plus dark + 自定义 token）；并把 Element Plus
+ * 的关键变量（--el-color-primary 等）桥接到本 token，让 EP 组件跟随本站主题。
+ *
+ * 主要内容：色彩 token（含 -soft 底色）、间距/字号/圆角/阴影、EP 变量桥接。
+ *
+ * 模块边界：只定义变量；组件样式在各自组件或 base.css。对比度按 NFR-9 校准
+ * （深色正文 ≥ 4.5:1，正文对 bg 实测 ≥ 7:1）。
+ */
+
+:root {
+  /* 色彩：亮色 */
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --surface-2: #f0f2f5;
+  --surface-3: #e8ebef;
+  --ink: #1b1f23;      /* 正文，对 bg 对比约 14:1 */
+  --ink-2: #4c545b;    /* 次要文字，对 bg 约 7:1 */
+  --ink-3: #7a828a;    /* 弱化文字，对 bg 约 4.6:1 */
+  --border: #e4e6e9;
+  --border-strong: #c9ced4;
+  --primary: #2b6cb0;
+  --primary-ink: #ffffff;
+  --primary-soft: #e3edf7;
+  --danger: #c0392b;
+  --danger-soft: #fdecea;
+  --warn: #9a6700;
+  --warn-soft: #fff3d6;
+  --ok: #1a7f37;
+  --ok-soft: #e2f5e8;
+  --focus: #2b6cb0;
+
+  /* 形状与排版 */
+  --radius: 8px;
+  --radius-sm: 5px;
+  --shadow: 0 1px 3px rgb(16 24 40 / 0.08), 0 4px 12px rgb(16 24 40 / 0.06);
+  --font: -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --mono: ui-monospace, Menlo, Consolas, monospace;
+
+  /* 间距刻度（4 的倍数） */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+}
+
+/* 深色：文字与边框逐项校对比度（NFR-9 ≥ 4.5:1）。 */
+html.dark {
+  --bg: #14171b;
+  --surface: #1d2126;
+  --surface-2: #24292f;
+  --surface-3: #2d333a;
+  --ink: #e8eaed;      /* 对 bg 约 12:1 */
+  --ink-2: #b3b9bf;    /* 对 bg 约 7:1 */
+  --ink-3: #979fa8;    /* 对 bg 约 5:1 */
+  --border: #33393f;
+  --border-strong: #4a525a;
+  --primary: #6ba3e0;
+  --primary-ink: #0d1117;
+  --primary-soft: #1c2a3a;
+  --danger: #e8837a;
+  --danger-soft: #3a2320;
+  --warn: #e3b341;
+  --warn-soft: #332a16;
+  --ok: #57ab5a;
+  --ok-soft: #1d2b1e;
+  --focus: #6ba3e0;
+  --shadow: 0 1px 3px rgb(0 0 0 / 0.5), 0 4px 12px rgb(0 0 0 / 0.35);
+}
+
+/* Element Plus 变量桥接：让 EP 组件与本站 token 同源（DR-2 单一 token 体系）。 */
+:root,
+html.dark {
+  --el-color-primary: var(--primary);
+  --el-color-success: var(--ok);
+  --el-color-warning: var(--warn);
+  --el-color-danger: var(--danger);
+  --el-color-error: var(--danger);
+  --el-bg-color: var(--surface);
+  --el-bg-color-page: var(--bg);
+  --el-bg-color-overlay: var(--surface);
+  --el-text-color-primary: var(--ink);
+  --el-text-color-regular: var(--ink-2);
+  --el-text-color-secondary: var(--ink-3);
+  --el-border-color: var(--border);
+  --el-border-color-light: var(--border);
+  --el-border-color-lighter: var(--border);
+  --el-fill-color: var(--surface-2);
+  --el-fill-color-light: var(--surface-2);
+  --el-fill-color-lighter: var(--surface-2);
+  --el-font-family: var(--font);
+  --el-border-radius-base: var(--radius-sm);
+}

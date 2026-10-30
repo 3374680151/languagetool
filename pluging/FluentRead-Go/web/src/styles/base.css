@@ -1,0 +1,74 @@
+/* base.css 是全站基础样式：reset、全局元素、通用工具类。
+ *
+ * @file web/src/styles/base.css
+ * 文件职责：盒模型与字体 reset、body 背景/前景、滚动条、焦点环、
+ * 轻量工具类（.page 容器、.card 面板、.muted 弱化文字）。
+ *
+ * 模块边界：只放无业务语义的全局样式；组件 scoped 样式在各组件内；
+ * 所有取色经 var(--token)，禁止散落硬编码色值（DR-2）。
+ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ink);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 焦点环统一：键盘可达性。 */
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+/* 页面容器：顶栏 + 内容区。 */
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.page__body {
+  flex: 1;
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: var(--sp-4);
+}
+
+/* 面板卡片。 */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.muted {
+  color: var(--ink-2);
+}
+
+.faint {
+  color: var(--ink-3);
+}
+
+/* 窄屏（NFR-10：400px 可用）。 */
+@media (max-width: 480px) {
+  .page__body {
+    padding: var(--sp-2);
+  }
+}

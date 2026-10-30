@@ -1,0 +1,59 @@
+# FluentRead-Go 本地与生产共用编排。
+# 用法：
+#   cp .env.example .env      # 填模型 key
+#   docker compose -f deploy/docker-compose.yml up -d
+#
+# 说明：web 通过服务名 litellm 访问网关，不经过宿主机端口。
+
+services:
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    environment:
+      FR_ADDR: ":8080"
+      FR_DB_PATH: /app/data/fluentread.db
+      # 容器内互访用服务名，覆盖 .env 里的 127.0.0.1
+      FR_GATEWAY_BASE: http://litellm:4000
+      FR_GATEWAY_KEY: ${LITELLM_MASTER_KEY}
+      FR_DEFAULT_MODEL: ${FR_DEFAULT_MODEL:-deepseek-chat}
+      FR_QUOTA_DAILY: ${FR_QUOTA_DAILY:-200}
+      FR_RATE_LIMIT: ${FR_RATE_LIMIT:-30}
+      FR_UPSTREAM_DAILY_CAP: ${FR_UPSTREAM_DAILY_CAP:-200000}
+      FR_ALLOW_ORIGINS: ${FR_ALLOW_ORIGINS:-}
+      FR_ADMIN_PASSWORD: ${FR_ADMIN_PASSWORD:-}
+    ports:
+      - "8080:8080"
+    volumes:
+      - ../data:/app/data
+    depends_on:
+      - litellm
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  litellm:
+    image: ghcr.io/berriai/litellm:main-stable
+    command: ["--config", "/app/config.yaml", "--port", "4000"]
+    environment:
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY}
+      DATABASE_URL: ${DATABASE_URL:-sqlite:///data/litellm.db}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-}
+      ZHIPU_API_KEY: ${ZHIPU_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      CUSTOM_BASE: ${CUSTOM_BASE:-}
+      CUSTOM_KEY: ${CUSTOM_KEY:-}
+    volumes:
+      - ./litellm.config.yaml:/app/config.yaml:ro
+      - ../data:/data
+    # 不对外暴露端口：只有 web 容器需要访问它
+    expose:
+      - "4000"
+    restart: unless-stopped
