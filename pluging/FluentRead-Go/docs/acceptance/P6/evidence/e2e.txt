@@ -1,0 +1,11 @@
+
+Running 6 tests using 1 worker
+
+  ✓  1 e2e/p6.spec.ts:16:3 › P6 SDK › FR-901/902 演示页悬浮球 + 快捷面板翻译，首段译文快 (615ms)
+  ✓  2 e2e/p6.spec.ts:33:3 › P6 SDK › FR-902 划词译文气泡 (178ms)
+  ✓  3 e2e/p6.spec.ts:55:3 › P6 SDK › FR-902 点词查词卡 + 收藏进同一个词表（FR-903 联动 FR-1201） (419ms)
+  ✓  4 e2e/p6.spec.ts:90:3 › P6 SDK › FR-904 Shadow DOM 隔离：宿主样式不串味 (109ms)
+  ✓  5 e2e/p6.spec.ts:107:3 › P6 SDK › FR-906 白名单外来源 403（可读提示） (21ms)
+  ✓  6 e2e/p6.spec.ts:118:3 › P6 SDK › FR-906 白名单为空 = SDK 关闭 (5ms)
+
+  6 passed (2.1s)

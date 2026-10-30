@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<!--
+  demo.html 是 SDK 一行接入演示页（FR-902 走查用，§7.9）。
+  @file web/sdk/demo.html
+  文件职责：模拟"博主的博客页"——一段英文文章 + 一行 <script> 接入 SDK；
+  宿主页自带样式（演示 Shadow DOM 隔离，FR-904）。
+  模块边界：仅演示；不含业务逻辑。
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Blog — Demo Host Page</title>
+  <style>
+    /* 故意用与主站完全不同的样式，验证 SDK 的样式隔离。 */
+    body { background: #fffbe8; color: #333; font-family: Georgia, serif; margin: 0; padding: 40px 20px; }
+    .post { max-width: 680px; margin: 0 auto; line-height: 1.9; }
+    h1 { color: #8b0000; }
+    p { margin: 1.2em 0; }
+    .tip { background: #e8f0fe; border-left: 4px solid #2b6cb0; padding: 8px 12px; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <article class="post">
+    <h1>Why retrieval matters</h1>
+    <p>
+      When you write about a technical topic, you often recall fragments of what you
+      have read before. The system will receive your draft and compare it with the
+      sources, so the conclusion you draw is grounded rather than guessed.
+    </p>
+    <p>
+      In practice, an obscure word like gerrymander can remind you that precision
+      matters: choose the term you actually mean.
+    </p>
+    <div class="tip">提示：拖动右下角的悬浮球；选中任意英文看译文；双击生词看释义并可收藏。</div>
+  </article>
+
+  <!-- 一行接入（演示：同源部署；跨站部署时 data-fr-server-url 指向站点地址） -->
+  <script src="/sdk/fluentread-sdk.js" data-fr-from="en" data-fr-to="zh-Hans"></script>
+</body>
+</html>

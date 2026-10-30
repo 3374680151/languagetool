@@ -159,7 +159,18 @@ func main() {
 		assets = nil
 	}
 
+	sdkJs, err := web.SDKAsset()
+	if err != nil {
+		slog.Warn("SDK 脚本加载失败", "err", err)
+	}
+	sdkDemo, err := web.SDKAssetDemo()
+	if err != nil {
+		slog.Warn("SDK 演示页加载失败", "err", err)
+	}
+
 	app := handler.NewApp(cfg, catalog, db, pool, translator, proofreader, dictionary, assets)
+	app.SDKAsset = sdkJs
+	app.SDKAssetDemo = sdkDemo
 	router := httpapi.NewRouter(app)
 
 	srv := &http.Server{

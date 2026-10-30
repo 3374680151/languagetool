@@ -58,6 +58,17 @@ func NewRouter(app *handler.App) *gin.Engine {
 	api.POST("/review/score", app.ReviewScore)
 	api.GET("/assets/export", app.AssetsExport)
 	api.POST("/assets/clear", app.AssetsClear)
+
+	// SDK（P6）：脚本下发（不走访客中间件，静态文件）+ 专用端点（白名单校验 + 访客身份）。
+	r.GET("/sdk/fluentread-sdk.js", app.SDKJs)
+	r.GET("/sdk/demo.html", app.SDKDemo)
+	sdk := api.Group("/sdk", app.SDKOriginGuard())
+	{
+		sdk.OPTIONS("/*any", app.SDKPreflight)
+		sdk.POST("/translate", app.SdkTranslate)
+		sdk.GET("/word", app.SdkWordLookup)
+		sdk.POST("/word", app.SdkWordCollect)
+	}
 	api.GET("/words", app.Words)
 	api.POST("/words", app.WordsCreate)
 	api.DELETE("/words", app.WordsDelete)

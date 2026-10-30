@@ -62,6 +62,9 @@ type App struct {
 	Proofreader *service.Proofreader
 	// Assets 是内嵌的前端产物（web/dist）。为 nil 时返回"前端未构建"说明页。
 	Assets fs.FS
+	// SDKAsset / SDKAssetDemo 是 P6 的 SDK 脚本与演示页字节。
+	SDKAsset     []byte
+	SDKAssetDemo []byte
 }
 
 // NewApp 构造依赖容器。

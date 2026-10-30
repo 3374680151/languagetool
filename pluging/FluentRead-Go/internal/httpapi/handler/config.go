@@ -62,9 +62,9 @@ func (a *App) Config(c *gin.Context) {
 		"translate": gatewayReady,
 		"proofread": true,  // P3 已上线
 		"visitorModel": true, // P3.5 已上线
+		"sdk":          len(a.Cfg.SDKOrigins) > 0, // P6：白名单为空 = 关闭（FR-906 安全默认）
 		"dictionary": false, // P4 打开
 		"glossary":   false, // P4 打开
-		"sdk":        false, // P6 打开
 	}
 
 	OK(c, gin.H{
