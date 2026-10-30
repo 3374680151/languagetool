@@ -5,45 +5,6 @@ PASS  前端构建（含 vue-tsc）
 PASS  FR-1203 错误本三条写入（片段/改法/类别/理由）
 PASS  FR-1203 类别筛选
 PASS  FR-1204 到期队列：收藏词挖空自己的句子
-FAIL  FR-1204 记住调度: count=3
-PASS  FR-1204 评分没记住 → 回退一档，很快再次到期
-PASS  FR-1205 导出含词表与错误本
-PASS  FR-1205 清空后为空
-FAIL  Playwright P5.5
-PASS  Playwright 复习翻卡（到期入口/挖空原句/两键评分/回退）
-PASS  go vet ./...
-PASS  go test ./...
-PASS  CGO_ENABLED=0 go build
-PASS  前端构建（含 vue-tsc）
-PASS  FR-1203 错误本三条写入（片段/改法/类别/理由）
-PASS  FR-1203 类别筛选
-PASS  FR-1204 到期队列：收藏词挖空自己的句子
-PASS  FR-1204 评分记住 → 进下一档，词卡出队
-PASS  FR-1204 评分没记住 → 回退一档，很快再次到期
-PASS  FR-1205 导出含词表与错误本
-PASS  FR-1205 清空后为空
-FAIL  Playwright P5.5
-PASS  Playwright 复习翻卡（到期入口/挖空原句/两键评分/回退）
-PASS  go vet ./...
-PASS  go test ./...
-PASS  CGO_ENABLED=0 go build
-PASS  前端构建（含 vue-tsc）
-PASS  FR-1203 错误本三条写入（片段/改法/类别/理由）
-PASS  FR-1203 类别筛选
-PASS  FR-1204 到期队列：收藏词挖空自己的句子
-PASS  FR-1204 评分记住 → 进下一档，词卡出队
-PASS  FR-1204 评分没记住 → 回退一档，很快再次到期
-PASS  FR-1205 导出含词表与错误本
-PASS  FR-1205 清空后为空
-PASS  Playwright P5.5（错误本筛选/删除/导出/清空 + 复习空态）
-PASS  Playwright 复习翻卡（到期入口/挖空原句/两键评分/回退）
-PASS  go vet ./...
-PASS  go test ./...
-PASS  CGO_ENABLED=0 go build
-PASS  前端构建（含 vue-tsc）
-PASS  FR-1203 错误本三条写入（片段/改法/类别/理由）
-PASS  FR-1203 类别筛选
-PASS  FR-1204 到期队列：收藏词挖空自己的句子
 PASS  FR-1204 评分记住 → 进下一档，词卡出队
 PASS  FR-1204 评分没记住 → 回退一档，很快再次到期
 PASS  FR-1205 导出含词表与错误本

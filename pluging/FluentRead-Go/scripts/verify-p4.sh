@@ -7,6 +7,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT" || exit 1
 EV="docs/acceptance/P4/evidence"
 mkdir -p "$EV" /tmp/fr-p4
+: > "$EV/gates.txt"  # 截断上次运行的门禁记录（每次运行独立留证）
 rm -f "$ROOT/data/verify-p4"*.db
 
 FAIL=0

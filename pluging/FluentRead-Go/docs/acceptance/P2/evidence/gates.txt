@@ -4,64 +4,6 @@ PASS  CGO_ENABLED=0 go build
 PASS  前端构建（含 vue-tsc）
 PASS  FR-1002 config 无密钥；FR-1004 未配置站点如实报 translate:false
 PASS  未配置实例 gateway:fail
-FAIL  P2 e2e
-FAIL  未配置态 e2e
-FAIL  限额态 e2e
-PASS  go vet ./...
-PASS  go test ./...
-PASS  CGO_ENABLED=0 go build
-PASS  前端构建（含 vue-tsc）
-PASS  FR-1002 config 无密钥；FR-1004 未配置站点如实报 translate:false
-PASS  未配置实例 gateway:fail
-FAIL  P2 e2e
-PASS  六态之未配置（页面照常可用）
-PASS  六态之限额（剩余与恢复时间）
-PASS  go vet ./...
-PASS  go test ./...
-PASS  CGO_ENABLED=0 go build
-PASS  前端构建（含 vue-tsc）
-PASS  FR-1002 config 无密钥；FR-1004 未配置站点如实报 translate:false
-PASS  未配置实例 gateway:fail
-FAIL  P2 e2e
-FAIL  未配置态 e2e
-PASS  六态之限额（剩余与恢复时间）
-PASS  六态之失败（原因+重试）
-PASS  go vet ./...
-PASS  go test ./...
-PASS  CGO_ENABLED=0 go build
-PASS  前端构建（含 vue-tsc）
-PASS  FR-1002 config 无密钥；FR-1004 未配置站点如实报 translate:false
-PASS  未配置实例 gateway:fail
-FAIL  P2 e2e
-PASS  六态之未配置（页面照常可用）
-PASS  六态之限额（剩余与恢复时间）
-PASS  六态之失败（原因+重试）
-PASS  go vet ./...
-PASS  go test ./...
-PASS  CGO_ENABLED=0 go build
-PASS  前端构建（含 vue-tsc）
-PASS  FR-1002 config 无密钥；FR-1004 未配置站点如实报 translate:false
-PASS  未配置实例 gateway:fail
-FAIL  P2 e2e
-PASS  六态之未配置（页面照常可用）
-PASS  六态之限额（剩余与恢复时间）
-PASS  六态之失败（原因+重试）
-PASS  go vet ./...
-PASS  go test ./...
-PASS  CGO_ENABLED=0 go build
-PASS  前端构建（含 vue-tsc）
-PASS  FR-1002 config 无密钥；FR-1004 未配置站点如实报 translate:false
-PASS  未配置实例 gateway:fail
-PASS  P2 e2e：空/加载/失败/超时/手改确认/导出/偏好持久化/深色400px
-PASS  六态之未配置（页面照常可用）
-PASS  六态之限额（剩余与恢复时间）
-PASS  六态之失败（原因+重试）
-PASS  go vet ./...
-PASS  go test ./...
-PASS  CGO_ENABLED=0 go build
-PASS  前端构建（含 vue-tsc）
-PASS  FR-1002 config 无密钥；FR-1004 未配置站点如实报 translate:false
-PASS  未配置实例 gateway:fail
 PASS  P2 e2e：空/加载/失败/超时/手改确认/导出/偏好持久化/深色400px
 PASS  六态之未配置（页面照常可用）
 PASS  六态之限额（剩余与恢复时间）

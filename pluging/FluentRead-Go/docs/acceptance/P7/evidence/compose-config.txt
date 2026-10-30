@@ -1,4 +1,4 @@
-time="2026-10-31T07:12:35+08:00" level=warning msg="The \"LITELLM_MASTER_KEY\" variable is not set. Defaulting to a blank string."
+time="2026-10-31T07:38:27+08:00" level=warning msg="The \"LITELLM_MASTER_KEY\" variable is not set. Defaulting to a blank string."
 name: deploy
 services:
   app:

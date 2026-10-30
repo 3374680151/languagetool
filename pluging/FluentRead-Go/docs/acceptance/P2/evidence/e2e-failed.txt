@@ -1,6 +1,6 @@
 
 Running 1 test using 1 worker
 
-  ✓  1 e2e/p2-states.spec.ts:29:1 › failed (532ms)
+  ✓  1 e2e/p2-states.spec.ts:29:1 › failed (475ms)
 
-  1 passed (924ms)
+  1 passed (859ms)

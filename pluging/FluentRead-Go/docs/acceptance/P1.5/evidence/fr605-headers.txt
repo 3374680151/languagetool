@@ -1,7 +1,7 @@
 HTTP/1.1 429 Too Many Requests
 Cache-Control: no-store
 Content-Type: application/json; charset=utf-8
-Retry-After: 61094
-Date: Fri, 30 Oct 2026 23:01:45 GMT
+Retry-After: 59547
+Date: Fri, 30 Oct 2026 23:27:32 GMT
 Content-Length: 159
 

@@ -4,32 +4,4 @@ PASS  CGO_ENABLED=0 go build
 PASS  前端构建（含 vue-tsc）
 PASS  FR-204 非子串建议被服务端丢弃
 PASS  FR-206 中文段返回空建议（跳过）
-FAIL  Playwright P3
-PASS  go vet ./...
-PASS  go test ./...
-PASS  CGO_ENABLED=0 go build
-PASS  前端构建（含 vue-tsc）
-PASS  FR-204 非子串建议被服务端丢弃
-PASS  FR-206 中文段返回空建议（跳过）
-FAIL  Playwright P3
-PASS  go vet ./...
-PASS  go test ./...
-PASS  CGO_ENABLED=0 go build
-PASS  前端构建（含 vue-tsc）
-PASS  FR-204 非子串建议被服务端丢弃
-PASS  FR-206 中文段返回空建议（跳过）
-PASS  Playwright P3（3 建议/逐条接受/忽略/无错反馈/中文无入口/不自动触发）
-PASS  go vet ./...
-PASS  go test ./...
-PASS  CGO_ENABLED=0 go build
-PASS  前端构建（含 vue-tsc）
-PASS  FR-204 非子串建议被服务端丢弃
-PASS  FR-206 中文段返回空建议（跳过）
-FAIL  Playwright P3
-PASS  go vet ./...
-PASS  go test ./...
-PASS  CGO_ENABLED=0 go build
-PASS  前端构建（含 vue-tsc）
-PASS  FR-204 非子串建议被服务端丢弃
-PASS  FR-206 中文段返回空建议（跳过）
 PASS  Playwright P3（3 建议/逐条接受/忽略/无错反馈/中文无入口/不自动触发）

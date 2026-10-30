@@ -11,6 +11,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT" || exit 1
 EV="docs/acceptance/P0/evidence"
 mkdir -p "$EV" /tmp/fr-p0
+: > "$EV/gates.txt"  # 截断上次运行的门禁记录（每次运行独立留证）
 
 FAIL=0
 pass() { echo "  PASS  $1"; echo "PASS  $1" >> "$EV/gates.txt"; }

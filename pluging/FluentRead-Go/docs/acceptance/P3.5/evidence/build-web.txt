@@ -24,4 +24,4 @@ dist/assets/index-BIL5-Yhs.js         1,014.54 kB │ gzip: 335.76 kB
 - Using dynamic import() to code-split the application
 - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
 - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
-✓ built in 2.39s
+✓ built in 2.35s

@@ -1,4 +1,4 @@
-time="2026-10-31T07:12:35+08:00" level=warning msg="The \"LITELLM_MASTER_KEY\" variable is not set. Defaulting to a blank string."
+time="2026-10-31T07:38:27+08:00" level=warning msg="The \"LITELLM_MASTER_KEY\" variable is not set. Defaulting to a blank string."
  Image deploy-app Building 
 #1 [internal] load local bake definitions
 #1 reading from stdin 671B done
@@ -8,23 +8,20 @@ time="2026-10-31T07:12:35+08:00" level=warning msg="The \"LITELLM_MASTER_KEY\" v
 #2 transferring dockerfile: 1.92kB done
 #2 DONE 0.0s
 
-#3 [internal] load metadata for docker.io/library/node:22-alpine
+#3 [internal] load metadata for docker.io/library/alpine:3.20
 #3 ...
 
 #4 [internal] load metadata for docker.io/library/golang:1.25-alpine
 #4 ...
 
-#5 [internal] load metadata for docker.io/library/alpine:3.20
-#5 ...
-
-#3 [internal] load metadata for docker.io/library/node:22-alpine
-#3 ERROR: DeadlineExceeded: context deadline exceeded
-
-#5 [internal] load metadata for docker.io/library/alpine:3.20
-#5 CANCELED
+#5 [internal] load metadata for docker.io/library/node:22-alpine
+#5 ERROR: DeadlineExceeded: context deadline exceeded
 
 #4 [internal] load metadata for docker.io/library/golang:1.25-alpine
 #4 CANCELED
+
+#3 [internal] load metadata for docker.io/library/alpine:3.20
+#3 CANCELED
 ------
  > [internal] load metadata for docker.io/library/node:22-alpine:
 ------
@@ -48,9 +45,9 @@ failed to solve: DeadlineExceeded: context deadline exceeded
 
 
 
-View build details: docker-desktop://dashboard/build/default/default/l1jijfhsx7laxoqatmfpg327u
+View build details: docker-desktop://dashboard/build/default/default/wficbz76no4g2ax68m3axi35o
 
-time="2026-10-31T07:13:36+08:00" level=warning msg="The \"LITELLM_MASTER_KEY\" variable is not set. Defaulting to a blank string."
+time="2026-10-31T07:39:28+08:00" level=warning msg="The \"LITELLM_MASTER_KEY\" variable is not set. Defaulting to a blank string."
  Image deploy-app Building 
 #1 [internal] load local bake definitions
 #1 reading from stdin 729B done
@@ -63,36 +60,39 @@ time="2026-10-31T07:13:36+08:00" level=warning msg="The \"LITELLM_MASTER_KEY\" v
 #3 [internal] load metadata for docker.m.daocloud.io/library/node:22-alpine
 #3 ...
 
-#4 [internal] load metadata for docker.m.daocloud.io/library/golang:1.25-alpine
+#4 [internal] load metadata for docker.io/library/alpine:3.20
 #4 ...
 
-#5 [internal] load metadata for docker.io/library/alpine:3.20
+#5 [internal] load metadata for docker.m.daocloud.io/library/golang:1.25-alpine
 #5 ...
 
 #3 [internal] load metadata for docker.m.daocloud.io/library/node:22-alpine
 #3 ERROR: DeadlineExceeded: context deadline exceeded
 
-#4 [internal] load metadata for docker.m.daocloud.io/library/golang:1.25-alpine
-#4 CANCELED
+#5 [internal] load metadata for docker.m.daocloud.io/library/golang:1.25-alpine
+#5 ERROR: DeadlineExceeded: context deadline exceeded
 
-#5 [internal] load metadata for docker.io/library/alpine:3.20
-#5 CANCELED
+#4 [internal] load metadata for docker.io/library/alpine:3.20
+#4 CANCELED
+------
+ > [internal] load metadata for docker.m.daocloud.io/library/golang:1.25-alpine:
+------
 ------
  > [internal] load metadata for docker.m.daocloud.io/library/node:22-alpine:
 ------
-Dockerfile:18
+Dockerfile:26
 
 --------------------
 
-  16 |     
+  24 |     
 
-  17 |     # ---------- 阶段 1：前端 ----------
+  25 |     # ---------- 阶段 2：后端 ----------
 
-  18 | >>> FROM ${NODE_IMAGE} AS web
+  26 | >>> FROM ${GO_IMAGE} AS build
 
-  19 |     WORKDIR /web
+  27 |     WORKDIR /src
 
-  20 |     COPY web/package.json web/package-lock.json ./
+  28 |     
 
 --------------------
 
@@ -100,5 +100,5 @@ failed to solve: DeadlineExceeded: context deadline exceeded
 
 
 
-View build details: docker-desktop://dashboard/build/default/default/t4iu0q6o02dvaxkrb47308koi
+View build details: docker-desktop://dashboard/build/default/default/j4jmq59ce4joesib5e7sfenzb
 
