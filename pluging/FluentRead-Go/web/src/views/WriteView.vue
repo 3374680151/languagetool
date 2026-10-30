@@ -13,12 +13,14 @@ import { ArrowRight, Switch } from '@element-plus/icons-vue';
 import SplitPane from '../components/SplitPane.vue';
 import { useWorkbenchStore } from '../stores/workbench';
 import { useSettingsStore } from '../stores/settings';
+import { useQuotaStore } from '../stores/quota';
 import { useUiStore } from '../stores/ui';
 import { Languages } from '../lib/lang';
 import { buildMarkdown, downloadText, exportFileName, type ExportMode } from '../lib/markdown';
 
 const doc = useWorkbenchStore();
 const settings = useSettingsStore();
+const quota = useQuotaStore();
 const ui = useUiStore();
 
 const activeSegId = ref<number | null>(null);
@@ -60,7 +62,23 @@ async function onTranslateAll(force = false) {
     );
     if (!okToOverwrite) return;
   }
+  const before = doc.stats.done;
   await doc.translateAll({ force });
+  syncQuota(before);
+}
+
+/** syncQuota 翻译后同步额度（FR-606：快用完才提示）。 */
+async function syncQuota(beforeDone: number) {
+  const delta = doc.stats.done - beforeDone;
+  if (delta > 0) {
+    quota.consume(delta);
+  }
+  if (!quota.loaded) {
+    await quota.refresh();
+  } else if (quota.lowQuota) {
+    // 低额度时以服务端为准，防止本地累计漂移。
+    await quota.refresh();
+  }
 }
 
 /** onSingleTranslate 译光标所在段（Ctrl/⌘+Shift+Enter，FR-106）。 */
@@ -74,7 +92,9 @@ async function onSingleTranslate() {
     const ok = await ui.askConfirm('重译这一段', '这段译文被你手动改过，重译会覆盖修改。继续吗？', '重译');
     if (!ok) return;
   }
+  const before = doc.stats.done;
   await doc.translateOne(activeSegId.value!);
+  syncQuota(before);
 }
 
 /** exportAs 导出 Markdown 三种模式（FR-801/802）。 */
@@ -107,6 +127,7 @@ onMounted(() => {
   if (!doc.restoreDraft()) {
     doc.clearAll();
   }
+  void quota.refresh();
   window.addEventListener('keydown', onKeydown);
   window.addEventListener('pagehide', saveNow);
 });
@@ -214,6 +235,23 @@ function setActive(id: number) {
       data-test="banner-degraded"
       title="本站今日付费翻译额度已用完，已自动切到免费方式"
       description="译文仍然可用，但质量可能下降，明天自动恢复。"
+    />
+
+    <el-alert
+      v-if="quota.lowQuota && !quota.exhausted"
+      type="warning"
+      :closable="false"
+      show-icon
+      data-test="banner-quota-low"
+      :title="`今日还剩 ${quota.remaining} 段可翻译，${quota.resetAtText()}恢复`"
+    />
+    <el-alert
+      v-if="quota.exhausted"
+      type="error"
+      :closable="false"
+      show-icon
+      data-test="banner-quota-out"
+      :title="`今日额度已用完，${quota.resetAtText()}恢复`"
     />
 
     <!-- 双栏对照区 -->

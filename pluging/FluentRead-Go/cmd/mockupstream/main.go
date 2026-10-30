@@ -188,7 +188,7 @@ func main() {
 		q := r.URL.Query().Get("q")
 		// 免费线路也按目标语言给假译文（langpair=en|zh-CN → 中文）。
 		pool := freeTemplatesEN
-		if to, _, ok := strings.Cut(r.URL.Query().Get("langpair"), "|"); ok {
+		if _, to, ok := strings.Cut(r.URL.Query().Get("langpair"), "|"); ok {
 			if strings.HasPrefix(to, "zh") {
 				pool = freeTemplatesZH
 			}

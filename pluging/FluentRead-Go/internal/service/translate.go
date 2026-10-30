@@ -201,11 +201,10 @@ func (t *Translator) Translate(ctx context.Context, visitorID string, req *Trans
 		if skipPaid {
 			degradedReason = "site_paid_cap"
 		}
+	}
+	// 站点请求计数：只要有非空段就记一次（site_usage_daily.translate_req）。
+	if segments > 0 {
 		if err := t.usage.AddSiteUsage(paidChars, freeChars, 1, 0, degraded); err != nil {
-			slog.Warn("写入站点用量失败", "err", err)
-		}
-	} else if paidChars > 0 || freeChars > 0 {
-		if err := t.usage.AddSiteUsage(paidChars, freeChars, 1, 0, 0); err != nil {
 			slog.Warn("写入站点用量失败", "err", err)
 		}
 	}

@@ -1,0 +1,6 @@
+
+Running 1 test using 1 worker
+
+  ✓  1 e2e/p1.5.spec.ts:30:1 › 额度提示按余量出现（FR-606） (957ms)
+
+  1 passed (1.3s)
