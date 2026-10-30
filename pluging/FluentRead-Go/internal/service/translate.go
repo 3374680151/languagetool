@@ -24,6 +24,7 @@ import (
 	"unicode/utf8"
 
 	"fluentread/internal/config"
+	"fluentread/internal/dict"
 	"fluentread/internal/errs"
 	"fluentread/internal/gateway"
 	"fluentread/internal/store"
@@ -41,11 +42,15 @@ type Translator struct {
 	pool  *gateway.Pool
 	usage *store.UsageRepo
 	cfg   *config.Config
+	// dict 与 words 服务"再用标记"（FR-1202）：收藏词在翻译的源文里再次出现
+	//（词形还原后匹配，与查词卡同一实现，AD-7）→ 使用次数 +1；不打断写作。
+	dict  *dict.Dictionary
+	words *store.WordRepo
 }
 
-// NewTranslator 构造编排器。
-func NewTranslator(pool *gateway.Pool, usage *store.UsageRepo, cfg *config.Config) *Translator {
-	return &Translator{pool: pool, usage: usage, cfg: cfg}
+// NewTranslator 构造编排器。dict/words 可为 nil（再使用标记停用）。
+func NewTranslator(pool *gateway.Pool, usage *store.UsageRepo, cfg *config.Config, dictionary *dict.Dictionary, words *store.WordRepo) *Translator {
+	return &Translator{pool: pool, usage: usage, cfg: cfg, dict: dictionary, words: words}
 }
 
 // TranslateRequest 是一批段落的翻译请求（§7.4）。
@@ -217,7 +222,63 @@ func (t *Translator) Translate(ctx context.Context, visitorID string, req *Trans
 		resp.DegradedReason = degradedReason
 	}
 	resp.Model = dominantModel(results)
+
+	// Step 5: 再使用标记（FR-1202）：收藏词出现在本次翻译的源文里 → 用过 +1。
+	t.markReused(visitorID, req.Segments)
+
 	return resp, nil
+}
+
+// markReused 对本次翻译的源文做分词与词形还原，命中收藏词则记一次使用。
+// 每词每次请求只 +1；任何失败静默跳过（绝不打断写作，FR-1202）。
+func (t *Translator) markReused(visitorID string, segments []string) {
+	if t.dict == nil || t.words == nil || visitorID == "" {
+		return
+	}
+	collected, err := t.words.WordsOfVisitor(visitorID)
+	if err != nil || len(collected) == 0 {
+		return
+	}
+	seen := make(map[string]bool, len(collected))
+	for _, seg := range segments {
+		if seg == "" {
+			continue
+		}
+		for _, tok := range tokenizeWords(seg) {
+			seen[t.dict.Lemma(tok)] = true
+		}
+	}
+	hits := make([]string, 0, 4)
+	for _, c := range collected {
+		if seen[c] {
+			hits = append(hits, c)
+		}
+	}
+	if len(hits) == 0 {
+		return
+	}
+	if err := t.words.MarkUsed(visitorID, hits, time.Now()); err != nil {
+		slog.Warn("再使用标记失败", "err", err)
+	}
+}
+
+// tokenizeWords 把文本切成小写英文词（字母/连字符/撇号）。
+func tokenizeWords(text string) []string {
+	out := make([]string, 0, 32)
+	start := -1
+	for i, r := range text {
+		ok := (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || r == '\'' || r == '-'
+		if ok && start < 0 {
+			start = i
+		} else if !ok && start >= 0 {
+			out = append(out, strings.ToLower(text[start:i]))
+			start = -1
+		}
+	}
+	if start >= 0 {
+		out = append(out, strings.ToLower(text[start:]))
+	}
+	return out
 }
 
 // translateSegment 翻译单段：先查缓存（FR-1101），未命中走降级链。

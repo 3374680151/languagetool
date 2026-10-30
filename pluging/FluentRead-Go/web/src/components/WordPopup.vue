@@ -42,6 +42,8 @@ const iconPos = ref({ x: 0, y: 0, visible: false, query: '' });
 let hideTimer: ReturnType<typeof setTimeout> | null = null;
 let lastLookup = { word: '', at: 0 };
 let lastRect: DOMRect | null = null;
+/** lastContext 在弹卡瞬间（textarea 还持有焦点与选区）捕获的所在句（8.5）。 */
+let lastContext = '';
 let seq = 0;
 
 /** wordCount 选区词数。 */
@@ -119,6 +121,8 @@ async function lookup(query: string, rect: DOMRect) {
     }
   }
 
+  // 弹卡瞬间抓"所在句"：此刻 textarea 还持有焦点与选区；点击收藏时焦点已移走。
+  lastContext = contextSentenceOf(query);
   const mySeq = ++seq;
   state.value = {
     visible: true,
@@ -200,8 +204,7 @@ async function collect() {
   collectState.value = 'loading';
   try {
     const { collectWord } = await import('../api/client');
-    const sentence = contextSentenceOf(entry.query);
-    await collectWord({ word: entry.word, lang: 'en', contextSentence: sentence });
+    await collectWord({ word: entry.word, lang: 'en', contextSentence: lastContext });
     entry.collected = { yes: true, useCount: entry.collected.useCount };
     collectState.value = 'done';
     // 收藏成功后刷新卡内已收藏态。

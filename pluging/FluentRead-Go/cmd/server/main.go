@@ -138,7 +138,7 @@ func main() {
 	}
 
 	// Step 4: 服务层与 HTTP 层。
-	translator := service.NewTranslator(pool, store.NewUsageRepo(db), cfg)
+	translator := service.NewTranslator(pool, store.NewUsageRepo(db), cfg, dictionary, store.NewWordRepo(db))
 	proofreader := service.NewProofreader(pool, store.NewUsageRepo(db), cfg)
 
 	assets, err := web.FS()
