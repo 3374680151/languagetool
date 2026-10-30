@@ -36,6 +36,8 @@ type App struct {
 	Usage *store.UsageRepo
 	// VisitorRepo 提供匿名访客续期（FR-1104）。
 	VisitorRepo *store.VisitorRepo
+	// PrefsRepo 提供用户偏好存取（FR-1001/1105）。
+	PrefsRepo *store.PrefsRepo
 	// Limiter 是按访客与 IP 的内存限流（重启清零是正常语义）。
 	Limiter *ratelimit.Limiter
 	// Pool 是模型池与降级链。
@@ -52,6 +54,7 @@ func NewApp(cfg *config.Config, catalog *config.Catalog, db *gorm.DB, pool *gate
 		Cfg: cfg, Catalog: catalog, DB: db,
 		Usage:       store.NewUsageRepo(db),
 		VisitorRepo: store.NewVisitorRepo(db),
+		PrefsRepo:   store.NewPrefsRepo(db),
 		Limiter:     ratelimit.New(cfg.RatePerMinute),
 		Pool:        pool, Translator: translator, Assets: assets,
 	}

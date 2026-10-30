@@ -14,6 +14,7 @@ import SplitPane from '../components/SplitPane.vue';
 import { useWorkbenchStore } from '../stores/workbench';
 import { useSettingsStore } from '../stores/settings';
 import { useQuotaStore } from '../stores/quota';
+import { useConfigStore } from '../stores/config';
 import { useUiStore } from '../stores/ui';
 import { Languages } from '../lib/lang';
 import { buildMarkdown, downloadText, exportFileName, type ExportMode } from '../lib/markdown';
@@ -21,6 +22,7 @@ import { buildMarkdown, downloadText, exportFileName, type ExportMode } from '..
 const doc = useWorkbenchStore();
 const settings = useSettingsStore();
 const quota = useQuotaStore();
+const config = useConfigStore();
 const ui = useUiStore();
 
 const activeSegId = ref<number | null>(null);
@@ -217,9 +219,9 @@ function setActive(id: number) {
       </span>
     </div>
 
-    <!-- 横幅：未配置 / 降级 / 超时取消（六态） -->
+    <!-- 横幅：未配置 / 降级 / 额度 / 超时（六态） -->
     <el-alert
-      v-if="doc.unconfigured"
+      v-if="doc.unconfigured || config.unconfigured"
       type="warning"
       :closable="false"
       show-icon
@@ -228,7 +230,7 @@ function setActive(id: number) {
       description="写作与草稿保存照常可用；配置好模型后翻译立即生效。"
     />
     <el-alert
-      v-if="doc.degradedReason"
+      v-if="doc.degradedReason === 'site_paid_cap'"
       type="warning"
       :closable="false"
       show-icon
@@ -236,6 +238,30 @@ function setActive(id: number) {
       title="本站今日付费翻译额度已用完，已自动切到免费方式"
       description="译文仍然可用，但质量可能下降，明天自动恢复。"
     />
+    <el-alert
+      v-else-if="doc.degradedReason"
+      type="warning"
+      :closable="false"
+      show-icon
+      data-test="banner-degraded"
+      title="部分内容由免费方式完成（模型暂时不可用）"
+      description="译文仍然可用，但质量可能略有下降。"
+    />
+    <el-alert
+      v-if="doc.translating && doc.waitedSeconds >= 8"
+      type="info"
+      :closable="false"
+      show-icon
+      data-test="banner-timeout"
+      :title="`翻译还在进行中，已等待 ${doc.waitedSeconds} 秒`"
+    >
+      <template #default>
+        <div class="timeout-row">
+          <span>模型响应比平时慢，你可以继续等，也可以取消后稍后重试。</span>
+          <el-button size="small" data-test="cancel-translate" @click="doc.cancel()">取消翻译</el-button>
+        </div>
+      </template>
+    </el-alert>
 
     <el-alert
       v-if="quota.lowQuota && !quota.exhausted"
@@ -297,6 +323,12 @@ function setActive(id: number) {
 .toolbar__stats {
   margin-left: auto;
   font-size: 12px;
+}
+
+.timeout-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
 }
 
 @media (max-width: 480px) {

@@ -15,15 +15,32 @@ import { useWorkbenchStore, type Segment } from '../stores/workbench';
 
 const doc = useWorkbenchStore();
 const activeId = ref<number | null>(null);
+/** dismissedEmpty 用户点过"开始写"后不再显示空态卡片（本次会话内）。 */
+const dismissedEmpty = ref(false);
 
 const emit = defineEmits<{ loadSample: []; setActive: [id: number] }>();
 
 const sourceEls = new Map<number, HTMLTextAreaElement>();
 
+/** virgin 文档还是"初始空白"状态：只有一段且从未输入/翻译——此时显示空态卡片（FR-111）。 */
+const virgin = () =>
+  doc.segments.length === 1 &&
+  doc.segments[0].source === '' &&
+  doc.segments[0].target === '' &&
+  doc.segments[0].status === 'idle';
+
 /** onFocusSource 记录光标所在段（Ctrl/⌘+Shift+Enter 只译该段，FR-106）。 */
 function onFocusSource(seg: Segment) {
   activeId.value = seg.id;
   emit('setActive', seg.id);
+}
+
+/** startWrite 从空态进入写作：隐藏卡片并聚焦第一段。 */
+async function startWrite() {
+  dismissedEmpty.value = true;
+  await nextTick();
+  const first = sourceEls.get(doc.segments[0]?.id ?? -1);
+  first?.focus();
 }
 
 /** autoGrow 让 textarea 高度跟随内容。 */
@@ -109,8 +126,18 @@ watch(() => doc.segments.length, () => nextTick(growAll));
     </div>
 
     <div class="split__scroll">
+      <!-- 空文档态（FR-111）：给说明 + 两个可点的动作 -->
+      <div v-if="virgin() && !dismissedEmpty" class="split__empty" data-test="empty-state">
+        <el-empty description="左边写下第一段英文，或粘贴整篇文章（空行会自动分段）">
+          <div class="split__empty-actions">
+            <el-button data-test="start-write" @click="startWrite">开始写</el-button>
+            <el-button type="primary" data-test="load-sample" @click="$emit('loadSample')">载入示例</el-button>
+          </div>
+        </el-empty>
+      </div>
       <div
         v-for="(seg, i) in doc.segments"
+        v-show="!(virgin() && !dismissedEmpty)"
         :key="seg.id"
         class="split-row"
         :class="{ 'split-row--active': activeId === seg.id }"
@@ -178,12 +205,6 @@ watch(() => doc.segments.length, () => nextTick(growAll));
         </div>
       </div>
 
-      <!-- 空文档态（FR-111） -->
-      <div v-if="doc.segments.length === 0" class="split__empty">
-        <el-empty description="左边写下第一段英文，或粘贴整篇文章（空行会自动分段）">
-          <el-button type="primary" data-test="load-sample" @click="$emit('loadSample')">载入示例</el-button>
-        </el-empty>
-      </div>
     </div>
   </div>
 </template>
