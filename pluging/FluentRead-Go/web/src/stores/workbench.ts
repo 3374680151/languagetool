@@ -50,6 +50,8 @@ export interface Segment {
 interface DraftPayload {
   v: 1;
   segments: Pick<Segment, 'source' | 'target' | 'edited' | 'lastSource'>[];
+  /** 上次翻译使用的术语指纹（FR-503 过期判定随草稿恢复）。 */
+  glossaryFingerprint?: string;
   savedAt: number;
 }
 
@@ -191,7 +193,7 @@ export const useWorkbenchStore = defineStore('workbench', {
       };
     },
 
-    /** insertAfter 在指定段后插入一个空段。 */
+    /** insertAfter 在指定段后插入一个空段，焦点落到新段（R0 走查反馈）。 */
     insertAfter(id: number) {
       const idx = this.segments.findIndex((s) => s.id === id);
       const created = this.makeSegment('');
@@ -200,6 +202,7 @@ export const useWorkbenchStore = defineStore('workbench', {
       } else {
         this.segments.splice(idx + 1, 0, created);
       }
+      this.pendingFocus = { id: created.id, offset: 0 };
       this.scheduleSave();
       return created.id;
     },
@@ -444,6 +447,9 @@ export const useWorkbenchStore = defineStore('workbench', {
           lastSource: s.lastSource ?? '',
           status: (s.target && s.lastSource === (s.source ?? '') ? 'done' : 'idle') as SegmentStatus,
         }));
+        // 恢复术语指纹：草稿里的译文对应当时的术语集，指纹不一致就要亮横幅（FR-503）。
+        this.glossaryFingerprint = draft.glossaryFingerprint ?? '';
+        this.glossaryFingerprintSeen = this.hasTranslated;
         return true;
       } catch {
         return false;
@@ -469,6 +475,7 @@ export const useWorkbenchStore = defineStore('workbench', {
             edited: s.edited,
             lastSource: s.lastSource,
           })),
+          glossaryFingerprint: this.glossaryFingerprint || undefined,
           savedAt: Date.now(),
         };
         localStorage.setItem(DRAFT_KEY, JSON.stringify(payload));
