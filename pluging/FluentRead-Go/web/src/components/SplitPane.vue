@@ -251,6 +251,7 @@ watch(() => doc.segments.length, () => nextTick(growAll));
 
 .split__scroll {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   align-content: start;
   padding: var(--sp-2) 0 var(--sp-6);

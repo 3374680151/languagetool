@@ -440,7 +440,13 @@ function setActive(id: number) {
 .write {
   display: flex;
   flex-direction: column;
-  min-height: calc(100vh - 48px);
+  /* 高度锁定视口：长文由 .split__scroll 内部滚动，工具栏常驻可及（R1 走查反馈）。
+     flex:none 必须——.page 高度 auto 时按内容计算，flex:1 会把本元素拉回内容高，
+     导致 25 段长文时工具栏滚出视口（双滚动缺陷）。 */
+  flex: none;
+  height: calc(100vh - 48px);
+  min-height: 0;
+  overflow: hidden;
 }
 
 .toolbar {
