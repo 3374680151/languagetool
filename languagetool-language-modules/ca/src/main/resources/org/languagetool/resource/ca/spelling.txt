@@ -1574,6 +1574,8 @@ etnocràtic
 etnocràtica
 etnocràtics
 etnocràtiques
+etnomedicinal
+etnomedicinals
 euro-iuan
 euro-iuans
 excomercial
@@ -1724,6 +1726,10 @@ fotosfèrics
 fotosfèriques
 fractalitat
 fractalitats
+francoitaliana
+francoitalianes
+francoitalians
+francoitalià
 francoparlant
 francoparlants
 frau
@@ -2701,6 +2707,7 @@ megamàser
 megamàsers
 megaproduccions
 megaproducció
+melodisme
 mesociclons
 mesocicló
 mesotònic
@@ -3080,6 +3087,8 @@ planetogràfic
 planetogràfica
 planetogràfics
 planetogràfiques
+planteta
+plantetes
 planxadet
 planxadeta
 planxadetes
@@ -3736,6 +3745,10 @@ rogeta
 rogetes
 rogets
 romanins
+romanticosimfònic
+romanticosimfònica
+romanticosimfònics
+romanticosimfòniques
 romaní
 romanís
 ros
