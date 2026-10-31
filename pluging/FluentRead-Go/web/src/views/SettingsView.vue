@@ -130,7 +130,7 @@ onMounted(() => {
           >
             <el-radio-button v-for="t in triggerOptions" :key="t.value" :value="t.value">{{ t.label }}</el-radio-button>
           </el-radio-group>
-          <div class="hint faint">查词卡随 P4 上线；先把触发习惯存好。</div>
+          <div class="hint faint">划选即弹：选中文字直接查；浮标确认：选中后点小浮标才查；修饰键：按住 Alt 划选才查。</div>
         </el-form-item>
         <el-form-item label="词卡自动朗读">
           <el-switch
